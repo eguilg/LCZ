@@ -19,9 +19,8 @@ val_file = '/home/zydq/Datasets/LCZ/validation.h5'
 mean_std_file = '/home/zydq/Datasets/LCZ/mean_std.h5'
 
 # model_dir = './checkpoints/model_' + str(round(time.time() % 100000))
-
-model_dir = './checkpoints/model_54017'
-
+# model_dir = './checkpoints/model_54017'
+model_dir = './checkpoints/model_70701'
 if not os.path.isdir('./checkpoints/'):
 	os.mkdir('./checkpoints/')
 if not os.path.isdir(model_dir):
@@ -69,7 +68,7 @@ if __name__ == '__main__':
 
 		global_step = 0
 
-	grade = 3
+	grade = 1
 	print_every = 50
 	last_val_step = global_step
 	val_every = [1000, 700, 500, 350]

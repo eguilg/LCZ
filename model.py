@@ -13,21 +13,21 @@ class PosAttn(nn.Module):
 
 		self.conv1 = nn.Sequential(
 			nn.Conv2d(channel, base, 3, 1, 1),
-			nn.ReLU(),
 			nn.BatchNorm2d(base),
+			nn.ReLU(),
 			nn.Conv2d(base, base, 3, 1, 1),
-			nn.ReLU(),
 			nn.BatchNorm2d(base),
+			nn.ReLU(),
 			nn.Dropout(0.2)
 		)
 
 		self.conv2 = nn.Sequential(
 			nn.Conv2d(base, 2 * base, 3, 1, 1),
-			nn.ReLU(),
 			nn.BatchNorm2d(2 * base),
+			nn.ReLU(),
 			nn.Conv2d(2 * base, 2 * base, 3, 1, 1),
-			nn.ReLU(),
 			nn.BatchNorm2d(2 * base),
+			nn.ReLU(),
 			nn.Dropout(0.3)
 		)
 
@@ -38,7 +38,7 @@ class PosAttn(nn.Module):
 		input = input.transpose(2, 3).transpose(1, 2)
 		attn = self.conv1(input)  # b base s s
 		attn = self.conv2(attn)  # b 2base s s
-		attn = self.drop(attn).transpose(1, 2).transpose(2, 3)  # b s s 2base
+		attn = attn.transpose(1, 2).transpose(2, 3)  # b s s 2base
 		attn = F.sigmoid(self.linear(attn))  # b s s 1
 
 		return attn
@@ -55,33 +55,33 @@ class ChannelAttn(nn.Module):
 
 		self.conv1 = nn.Sequential(
 			nn.Conv2d(channel, base, 3, 1, 1),
-			nn.ReLU(),
 			nn.BatchNorm2d(base),
+			nn.ReLU(),
 			nn.Conv2d(base, base, 3, 1, 1),
-			nn.ReLU(),
 			nn.BatchNorm2d(base),
+			nn.ReLU(),
 			nn.MaxPool2d(2, 2),
 			nn.Dropout(0.2)
 		)
 
 		self.conv2 = nn.Sequential(
 			nn.Conv2d(base, 2 * base, 3, 1, 1),
-			nn.ReLU(),
 			nn.BatchNorm2d(2 * base),
+			nn.ReLU(),
 			nn.Conv2d(2 * base, 2 * base, 3, 1, 1),
-			nn.ReLU(),
 			nn.BatchNorm2d(2 * base),
+			nn.ReLU(),
 			nn.MaxPool2d(2, 2),
 			nn.Dropout(0.3)
 		)
 
 		self.conv3 = nn.Sequential(
 			nn.Conv2d(2 * base, 4 * base, 3, 1, 1),
-			nn.ReLU(),
 			nn.BatchNorm2d(4 * base),
+			nn.ReLU(),
 			nn.Conv2d(4 * base, 4 * base, 3, 1, 1),
-			nn.ReLU(),
 			nn.BatchNorm2d(4 * base),
+			nn.ReLU(),
 			nn.MaxPool2d(2, 2),
 			nn.Dropout(0.4)
 		)
@@ -95,9 +95,9 @@ class ChannelAttn(nn.Module):
 		f = self.conv1(input)  # b base 16 16
 		f = self.conv2(f)  # b 2base 8 8
 		f = self.conv3(f)  # b 4base 4 4
-		f = F.avg_pool2d(f, 2, 2)  # b 4base 2 2
+		f = F.max_pool2d(f, 2, 2)  # b 4base 2 2
 		f = f.transpose(1, 2).transpose(2, 3)
-		f = F.sigmoid(self.linear(self.drop(f))).max(1, keepdim=True)[0].max(2, keepdim=True)[0]  # b 1 1 c
+		f = F.sigmoid(self.linear(f)).max(1, keepdim=True)[0].max(2, keepdim=True)[0]  # b 1 1 c
 		return f
 
 
@@ -146,7 +146,18 @@ class LCZNet(nn.Module):
 			nn.Dropout(0.4)
 		)
 
-		self.linear = nn.Linear(4 * base, n_class)
+		self.conv4 = nn.Sequential(
+			nn.Conv2d(4 * base, 8 * base, 3, 1, 1),
+			nn.ReLU(),
+			nn.BatchNorm2d(8 * base),
+			nn.Conv2d(8 * base, 8 * base, 3, 1, 1),
+			nn.ReLU(),
+			nn.BatchNorm2d(8 * base),
+			nn.MaxPool2d(2, 2),
+			nn.Dropout(0.4)
+		)
+
+		self.linear = nn.Linear(8 * base, n_class)
 		self.channel = channel
 
 	def forward(self, input):
@@ -158,8 +169,8 @@ class LCZNet(nn.Module):
 		out = self.conv1(att_input)  # b base 16 16
 		out = self.conv2(out)  # b 2base 8 8
 		out = self.conv3(out)  # b 4base 4 4
-		out = F.avg_pool2d(out, 2, 2)  # b 4base 2 2
+		out = self.conv4(out)  # b 8base 2 2
 		out = out.transpose(1, 2).transpose(2, 3)  # b 2 2 4base
-		out = F.softmax(self.linear(self.drop(out)).max(1)[0].max(1)[0], dim=-1)  # b class
+		out = F.softmax(self.linear(out).max(1)[0].max(1)[0], dim=-1)  # b class
 
 		return out

@@ -13,7 +13,8 @@ BATCH_SIZE = 32
 test_file = '/home/zydq/Datasets/LCZ/round1_test_a_20181109.h5'
 mean_std_file = '/home/zydq/Datasets/LCZ/mean_std.h5'
 
-model_dir = './checkpoints/model_54017'
+# model_dir = './checkpoints/model_54017'
+model_dir = './checkpoints/model_70701'
 cur_model_path = os.path.join(model_dir, 'state_curr.ckpt')
 
 if not os.path.isdir('./submit/'):
