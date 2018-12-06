@@ -31,8 +31,9 @@ cur_model_path = os.path.join(model_dir, 'state_curr.ckpt')
 if __name__ == '__main__':
 
 	mean_std_h5 = h5py.File(mean_std_file, 'r')
-	mean = torch.from_numpy(np.array(mean_std_h5['mean']).reshape(-1, 18).mean(0)).float().cuda()
-	std = torch.from_numpy(np.sqrt((np.array(mean_std_h5['std']).reshape(-1, 18) ** 2).mean(0))).float().cuda()
+	N_CHANNEL = mean_std_h5['mean'].shape[-1]
+	mean = torch.from_numpy(np.array(mean_std_h5['mean']).reshape(-1, N_CHANNEL).mean(0)).float().cuda()
+	std = torch.from_numpy(np.sqrt((np.array(mean_std_h5['std']).reshape(-1, N_CHANNEL) ** 2).mean(0))).float().cuda()
 	# mean = torch.from_numpy(np.array(mean_std_h5['mean'])).float().cuda()
 	# std = torch.from_numpy(np.array(mean_std_h5['std'])).float().cuda()
 	mean_std_h5.close()
@@ -53,7 +54,7 @@ if __name__ == '__main__':
 	train_loader = MyDataLoader(data_source.h5fids, data_source.train_indices)
 	val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
 
-	model = LCZNet(channel=18, n_class=17, base=64, dropout=0.3)
+	model = LCZNet(channel=N_CHANNEL, n_class=17, base=64, dropout=0.3)
 	model = model.cuda()
 
 	model_param_num = 0
