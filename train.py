@@ -5,7 +5,8 @@ from tqdm import tqdm
 import torch
 import torch.nn as nn
 import numpy as np
-from dataloader import prepare_batch, MyDataLoader, H5DataSource
+from dataloader import MyDataLoader, H5DataSource
+from preprocess import prepare_batch
 from model import LCZNet
 
 # import torchvision.models as models
@@ -16,11 +17,11 @@ BATCH_SIZE = 256
 LR = 3e-4
 train_file = '/home/zydq/Datasets/LCZ/training.h5'
 val_file = '/home/zydq/Datasets/LCZ/validation.h5'
-mean_std_file = '/home/zydq/Datasets/LCZ/mean_std.h5'
+mean_std_file = '/home/zydq/Datasets/LCZ/mean_std_f_trainval.h5'
 
-# model_dir = './checkpoints/model_' + str(round(time.time() % 100000))
+model_dir = './checkpoints/model_' + str(round(time.time() % 100000))
 # model_dir = './checkpoints/model_54017'
-model_dir = './checkpoints/model_70701'
+# model_dir = './checkpoints/model_70701'
 if not os.path.isdir('./checkpoints/'):
 	os.mkdir('./checkpoints/')
 if not os.path.isdir(model_dir):
@@ -30,18 +31,27 @@ cur_model_path = os.path.join(model_dir, 'state_curr.ckpt')
 if __name__ == '__main__':
 
 	mean_std_h5 = h5py.File(mean_std_file, 'r')
-	mean = np.array(mean_std_h5['mean'])
-	std = np.array(mean_std_h5['std'])
+	mean = torch.from_numpy(np.array(mean_std_h5['mean']).reshape(-1, 18).mean(0)).float().cuda()
+	std = torch.from_numpy(np.sqrt((np.array(mean_std_h5['std']).reshape(-1, 18) ** 2).mean(0))).float().cuda()
+	# mean = torch.from_numpy(np.array(mean_std_h5['mean'])).float().cuda()
+	# std = torch.from_numpy(np.array(mean_std_h5['std'])).float().cuda()
 	mean_std_h5.close()
 
-	data_source = H5DataSource([train_file, val_file], BATCH_SIZE, split=0.1, seed=SEED)
-	train_loader = MyDataLoader(data_source.h5fids, data_source.train_indices)
-	val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
+	# train val 合并再划分
+	# data_source = H5DataSource([train_file, val_file], BATCH_SIZE, split=0.1, seed=SEED)
+	# train_loader = MyDataLoader(data_source.h5fids, data_source.train_indices)
+	# val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
 
+	# 官方train val
 	# train_source = H5DataSource([train_file], BATCH_SIZE, split=None, seed=SEED)
 	# val_source = H5DataSource([val_file], BATCH_SIZE, shuffle=False, split=None)
 	# train_loader = MyDataLoader(train_source.h5fids, train_source.indices)
 	# val_loader = MyDataLoader(val_source.h5fids, val_source.indices)
+
+	# 只用val
+	data_source = H5DataSource([val_file], BATCH_SIZE, split=0.1, seed=SEED)
+	train_loader = MyDataLoader(data_source.h5fids, data_source.train_indices)
+	val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
 
 	model = LCZNet(channel=18, n_class=17, base=64, dropout=0.3)
 	model = model.cuda()
@@ -68,10 +78,10 @@ if __name__ == '__main__':
 
 		global_step = 0
 
-	grade = 1
+	grade = 4
 	print_every = 50
 	last_val_step = global_step
-	val_every = [1000, 700, 500, 350]
+	val_every = [1000, 700, 500, 350, 100]
 	drop_lr_frq = 2
 	val_no_improve = 0
 	loss_print = 0
@@ -85,9 +95,13 @@ if __name__ == '__main__':
 				train_input, train_target = prepare_batch(train_data, train_label, mean, std)
 				model.train()
 				optimizer.zero_grad()
-				train_out = model(train_input)
-				loss = criteria(train_out, train_target)
-				loss.backward()
+				# train_out = model(train_input)
+				train_node_out, train_out = model(train_input)
+				loss = criteria(train_out, train_target[:, 5:].max(-1)[1])
+				loss_node = criteria(train_node_out, train_target[:, :5].max(-1)[1])
+				# loss.backward()
+				loss_total = loss + loss_node
+				loss_total.backward()
 				torch.nn.utils.clip_grad_norm_(model.parameters(), 5)
 				optimizer.step()
 
@@ -95,7 +109,8 @@ if __name__ == '__main__':
 				step += 1
 				global_step += 1
 
-				train_hit += (train_out.max(-1)[1] == train_target).sum().item()
+				# train_hit += (train_out.max(-1)[1] == train_target).sum().item()
+				train_hit += (train_out.max(-1)[1] == train_target[:, 5:].max(-1)[1]).sum().item()
 				train_sample += train_target.size()[0]
 
 				if global_step % print_every == 0:
@@ -125,10 +140,10 @@ if __name__ == '__main__':
 						model.eval()
 						for val_data, val_label in val_loader:
 							val_input, val_target = prepare_batch(val_data, val_label, mean, std)
-							val_out = model(val_input)
-
-							val_loss_total += criteria(val_out, val_target).item()
-							val_hit += (val_out.max(-1)[1] == val_target).sum().item()
+							# val_out = model(val_input)
+							val_node_out, val_out = model(val_input)
+							val_loss_total += criteria(val_out, val_target[:, 5:].max(-1)[1]).item()
+							val_hit += (val_out.max(-1)[1] == val_target[:, 5:].max(-1)[1]).sum().item()
 							val_sample += val_target.size()[0]
 							val_step += 1
 

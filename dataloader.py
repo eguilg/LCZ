@@ -63,14 +63,6 @@ class _MyDataIter(object):
 		return x_b, y_b
 
 
-def prepare_batch(x_b, y_b, mean, std):
-	x_b = (x_b - mean[None, :, :, :]) / std[None, :, :, :]
-	x_b = torch.from_numpy(x_b).float().cuda()
-	if y_b is not None:
-		y_b = torch.from_numpy(y_b).max(-1)[1].cuda()
-	return x_b, y_b
-
-
 if __name__ == '__main__':
 	train_file = '/home/zydq/Datasets/LCZ/training.h5'
 	val_file = '/home/zydq/Datasets/LCZ/validation.h5'
@@ -79,5 +71,5 @@ if __name__ == '__main__':
 	train_loader = MyDataLoader(data_source.h5fids, data_source.train_indices)
 	val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
 	for batch_data, batch_label in train_loader:
-		batch_data, batch_label = prepare_batch(batch_data, batch_label)
+		# batch_data, batch_label = prepare_batch(batch_data, batch_label)
 		print(batch_data.shape, batch_label.shape)

@@ -60,7 +60,7 @@ class ChannelAttn(nn.Module):
 			nn.Conv2d(base, base, 3, 1, 1),
 			nn.BatchNorm2d(base),
 			nn.ReLU(),
-			nn.MaxPool2d(2, 2),
+			nn.AvgPool2d(2, 2),
 			nn.Dropout(0.2)
 		)
 
@@ -101,6 +101,27 @@ class ChannelAttn(nn.Module):
 		return f
 
 
+class HierarchicalClassifier(nn.Module):
+	"""
+	级联连分类器
+	"""
+
+	def __init__(self, feature_dim, leaf_nums):
+		super(HierarchicalClassifier, self).__init__()
+		self.node_classifier = nn.Linear(feature_dim, len(leaf_nums))
+		self.leaf_classifiers = nn.ModuleList()
+		for lf_n in leaf_nums:
+			self.leaf_classifiers.append(nn.Linear(feature_dim, lf_n))
+
+	def forward(self, input):
+		node_pred = F.softmax(self.node_classifier(input), -1)
+		leaf_preds = []
+		for i, lf_clsfr in enumerate(self.leaf_classifiers):
+			leaf_preds.append(F.softmax(lf_clsfr(input), -1) * node_pred[:, i][:, None])
+		leaf_preds = torch.cat(leaf_preds, -1)
+		return node_pred, leaf_preds
+
+
 class LCZNet(nn.Module):
 	"""
 		LCZ分类网络
@@ -120,7 +141,7 @@ class LCZNet(nn.Module):
 			nn.Conv2d(base, base, 3, 1, 1),
 			nn.ReLU(),
 			nn.BatchNorm2d(base),
-			nn.MaxPool2d(2, 2),
+			nn.AvgPool2d(2, 2),
 			nn.Dropout(0.2)
 		)
 
@@ -157,7 +178,7 @@ class LCZNet(nn.Module):
 			nn.Dropout(0.4)
 		)
 
-		self.linear = nn.Linear(8 * base, n_class)
+		self.classifier = HierarchicalClassifier(4 * 8 * base, [3, 3, 4, 4, 3])
 		self.channel = channel
 
 	def forward(self, input):
@@ -166,11 +187,11 @@ class LCZNet(nn.Module):
 		c_att = self.c_att(att_input)
 		#  input with attention
 		att_input = (c_att * att_input).transpose(2, 3).transpose(1, 2)
-		out = self.conv1(att_input)  # b base 16 16
-		out = self.conv2(out)  # b 2base 8 8
-		out = self.conv3(out)  # b 4base 4 4
-		out = self.conv4(out)  # b 8base 2 2
-		out = out.transpose(1, 2).transpose(2, 3)  # b 2 2 4base
-		out = F.softmax(self.linear(out).max(1)[0].max(1)[0], dim=-1)  # b class
-
-		return out
+		f = self.conv1(att_input)  # b base 16 16
+		f = self.conv2(f)  # b 2base 8 8
+		f = self.conv3(f)  # b 4base 4 4
+		f = self.conv4(f)  # b 8base 2 2
+		f = f.transpose(1, 2).transpose(2, 3)  # b 2 2 8base
+		f = f.contiguous().view(f.size(0), -1)
+		node_out, leaf_out = self.classifier(f)
+		return node_out, leaf_out
