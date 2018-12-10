@@ -1,23 +1,28 @@
 import os
-import time
 import h5py
 from tqdm import tqdm
 import torch
 import numpy as np
-from dataloader import  MyDataLoader, H5DataSource
+from dataloader import MyDataLoader, H5DataSource
 from preprocess import prepare_batch
-from model import LCZNet
+from modules.lcz_net import LCZNet
+from modules.gac_net import GACNet
 
 # import torchvision.models as models
 
 BATCH_SIZE = 32
 test_file = '/home/zydq/Datasets/LCZ/round1_test_a_20181109.h5'
-mean_std_file = '/home/zydq/Datasets/LCZ/mean_std_f_trainval.h5'
+mean_std_file = '/home/zydq/Datasets/LCZ/mean_std_f39_trainval.h5'
 
-# model_dir = './checkpoints/model_54017'
-# model_dir = './checkpoints/model_70701'
-# model_dir = './checkpoints/model_73199'
-model_dir = './checkpoints/model_82252'
+MODEL = 'GAC'
+# MODEL = 'LCZ'
+
+# model_dir = './checkpoints/model_20930'  # GACNet + class weight  8903  770
+# model_dir = './checkpoints/model_69737'  # GACNet no class weight  8857  780
+# model_dir = './checkpoints/model_2234'  # LCZNet + class weight  8773 743
+
+model_dir = './checkpoints/model_29624'  # GACNet + class weight<1
+
 cur_model_path = os.path.join(model_dir, 'state_curr.ckpt')
 
 if not os.path.isdir('./submit/'):
@@ -37,7 +42,18 @@ if __name__ == '__main__':
 	data_source = H5DataSource([test_file], BATCH_SIZE, shuffle=False)
 	test_loader = MyDataLoader(data_source.h5fids, data_source.indices)
 
-	model = LCZNet(channel=N_CHANNEL, n_class=17, base=64, dropout=0.3)
+	if MODEL == 'LCZ':
+		model = LCZNet(channel=N_CHANNEL, n_class=17, base=64, dropout=0.3)
+	elif MODEL == 'GAC':
+		# group_sizes = [2, 2, 2, 2, 2,
+		# 			   3, 3, 1, 1, 2]
+		group_sizes = [3, 3, 3, 3, 3, 3, 3, 4, 4,
+					   3, 3, 1, 1, 2]
+		class_nodes = [3, 3, 4, 4, 3]
+		model = GACNet(group_sizes, class_nodes, 32)
+	else:
+		model = LCZNet(channel=N_CHANNEL, n_class=17, base=64, dropout=0.3)
+
 	model = model.cuda()
 
 	best_score = 0

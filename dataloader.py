@@ -1,10 +1,9 @@
 import h5py
-import torch
 import numpy as np
 
 
 class H5DataSource(object):
-	def __init__(self, data_paths, batch_size, split=0.2, shuffle=True, seed=502):
+	def __init__(self, data_paths, batch_size, val_ratios=None, split=0.1, shuffle=True, seed=502):
 		self.h5fids = []
 		for path in data_paths:
 			self.h5fids.append(h5py.File(path, 'r'))
@@ -16,11 +15,33 @@ class H5DataSource(object):
 		if shuffle:
 			np.random.seed(seed)
 			np.random.shuffle(self.indices)
-		if split is not None:
+
+		if val_ratios is not None:
+			split_idxs = [int(self.batch_nums[id] * val_ratios[id]) for id in range(len(val_ratios))]
+			print(split_idxs)
+			fid_indices = [list(filter(lambda f: f[0] == fid, self.indices)) for fid in range(len(self.h5fids))]
+			self.val_indices = []
+			self.train_indices = []
+			for split_idx, indices in zip(split_idxs, fid_indices):
+				self.val_indices += indices[:split_idx]
+				self.train_indices += indices[split_idx:]
+
+			if shuffle:
+				np.random.seed(seed)
+				np.random.shuffle(self.train_indices)
+				np.random.seed(seed)
+				np.random.shuffle(self.val_indices)
+
+			print(self.train_indices)
+			print(self.val_indices)
+
+		elif split is not None:
 			split_idx = int(len(self.indices) * split)
 			self.val_indices = self.indices[:split_idx]
 			self.train_indices = self.indices[split_idx:]
-
+		if 'label' in self.h5fids[0].keys():
+			self.class_weights = (1 / 17) / np.concatenate([h5['label'] for h5 in self.h5fids], axis=0).mean(axis=0)
+			print(self.class_weights)
 
 class MyDataLoader(object):
 	def __init__(self, h5fids, indices):
@@ -67,9 +88,10 @@ if __name__ == '__main__':
 	train_file = '/home/zydq/Datasets/LCZ/training.h5'
 	val_file = '/home/zydq/Datasets/LCZ/validation.h5'
 
-	data_source = H5DataSource([train_file, val_file], 32, split=0.1)
+	data_source = H5DataSource([train_file, val_file], 256, [0.02282, 2 / 3], split=0.05, seed=502)
 	train_loader = MyDataLoader(data_source.h5fids, data_source.train_indices)
 	val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
-	for batch_data, batch_label in train_loader:
-		# batch_data, batch_label = prepare_batch(batch_data, batch_label)
-		print(batch_data.shape, batch_label.shape)
+# for batch_data, batch_label in train_loader:
+# 	# batch_data, batch_label = prepare_batch(batch_data, batch_label)
+# 	print(batch_data.shape, batch_label.shape)
+# print(data_source.val_indices)

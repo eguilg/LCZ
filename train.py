@@ -7,21 +7,25 @@ import torch.nn as nn
 import numpy as np
 from dataloader import MyDataLoader, H5DataSource
 from preprocess import prepare_batch
-from model import LCZNet
-
-# import torchvision.models as models
+from modules.lcz_net import LCZNet
+from modules.gac_net import GACNet
 
 SEED = 502
 EPOCH = 150
-BATCH_SIZE = 256
-LR = 3e-4
+BATCH_SIZE = 128
+LR = 1.5e-4
+PRE_HEAT_LR = 1e-5
+LR_CICLE = 3000
+USE_CLASS_WEIGHT = True
+MODEL = 'GAC'
+# MODEL = 'LCZ'
 train_file = '/home/zydq/Datasets/LCZ/training.h5'
 val_file = '/home/zydq/Datasets/LCZ/validation.h5'
 mean_std_file = '/home/zydq/Datasets/LCZ/mean_std_f_trainval.h5'
 
 model_dir = './checkpoints/model_' + str(round(time.time() % 100000))
-# model_dir = './checkpoints/model_54017'
-# model_dir = './checkpoints/model_70701'
+# model_dir = './checkpoints/model_20930'  #GACNet with class weight  8903
+# model_dir = './checkpoints/model_69737'  #GACNet with no class weight  8857
 if not os.path.isdir('./checkpoints/'):
 	os.mkdir('./checkpoints/')
 if not os.path.isdir(model_dir):
@@ -50,20 +54,41 @@ if __name__ == '__main__':
 	# val_loader = MyDataLoader(val_source.h5fids, val_source.indices)
 
 	# 只用val
-	data_source = H5DataSource([val_file], BATCH_SIZE, split=0.1, seed=SEED)
+	# data_source = H5DataSource([val_file], BATCH_SIZE, split=0.1, seed=SEED)
+	# train_loader = MyDataLoader(data_source.h5fids, data_source.train_indices)
+	# val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
+
+	# 合并再划分 val 中 1:2
+	data_source = H5DataSource([train_file, val_file], BATCH_SIZE, [0.02282, 2 / 3], seed=SEED)
 	train_loader = MyDataLoader(data_source.h5fids, data_source.train_indices)
 	val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
+	class_weights = torch.from_numpy(data_source.class_weights).float().cuda().clamp(0, 1)
+	print(class_weights)
 
-	model = LCZNet(channel=N_CHANNEL, n_class=17, base=64, dropout=0.3)
+	if MODEL == 'LCZ':
+		model = LCZNet(channel=N_CHANNEL, n_class=17, base=64, dropout=0.3)
+	elif MODEL == 'GAC':
+		group_sizes = [2, 2, 2, 2, 2,
+					   3, 3, 1, 1, 2]
+		# group_sizes = [3, 3, 3, 3, 3, 3, 3, 4, 4,
+		# 			   3, 3, 1, 1, 2]
+		class_nodes = [3, 3, 4, 4, 3]
+		model = GACNet(group_sizes, class_nodes, 32)
+	else:
+		model = LCZNet(channel=N_CHANNEL, n_class=17, base=64, dropout=0.3)
+
 	model = model.cuda()
-
 	model_param_num = 0
 	for param in list(model.parameters()):
 		model_param_num += param.nelement()
 	print('num_params: %d' % (model_param_num))
 
-	criteria = nn.CrossEntropyLoss().cuda()
-	optimizer = torch.optim.Adam(model.parameters(), lr=LR)
+	if USE_CLASS_WEIGHT:
+		criteria1 = nn.NLLLoss(class_weights).cuda()
+	else:
+		criteria1 = nn.NLLLoss().cuda()
+	criteria2 = nn.NLLLoss().cuda()
+	optimizer = torch.optim.Adam(model.parameters(), lr=PRE_HEAT_LR)
 
 	if os.path.isfile(cur_model_path):
 		print('load training param, ', cur_model_path)
@@ -79,11 +104,11 @@ if __name__ == '__main__':
 
 		global_step = 0
 
-	grade = 4
+	grade = 1
 	print_every = 50
 	last_val_step = global_step
 	val_every = [1000, 700, 500, 350, 100]
-	drop_lr_frq = 2
+	drop_lr_frq = 1
 	val_no_improve = 0
 	loss_print = 0
 	train_hit = 0
@@ -93,13 +118,13 @@ if __name__ == '__main__':
 		step = 0
 		with tqdm(total=len(train_loader)) as bar:
 			for i, (train_data, train_label) in enumerate(train_loader):
-				train_input, train_target = prepare_batch(train_data, train_label, mean, std)
+				train_input, train_target = prepare_batch(train_data, train_label, mean, std, aug=True)
 				model.train()
 				optimizer.zero_grad()
 				# train_out = model(train_input)
 				train_node_out, train_out = model(train_input)
-				loss = criteria(train_out, train_target[:, 5:].max(-1)[1])
-				loss_node = criteria(train_node_out, train_target[:, :5].max(-1)[1])
+				loss = criteria1(torch.log(train_out), train_target[:, 5:].max(-1)[1])
+				loss_node = criteria2(torch.log(train_node_out), train_target[:, :5].max(-1)[1])
 				# loss.backward()
 				loss_total = loss + loss_node
 				loss_total.backward()
@@ -143,7 +168,7 @@ if __name__ == '__main__':
 							val_input, val_target = prepare_batch(val_data, val_label, mean, std)
 							# val_out = model(val_input)
 							val_node_out, val_out = model(val_input)
-							val_loss_total += criteria(val_out, val_target[:, 5:].max(-1)[1]).item()
+							val_loss_total += criteria1(torch.log(val_out), val_target[:, 5:].max(-1)[1]).item()
 							val_hit += (val_out.max(-1)[1] == val_target[:, 5:].max(-1)[1]).sum().item()
 							val_sample += val_target.size()[0]
 							val_step += 1
@@ -182,18 +207,22 @@ if __name__ == '__main__':
 					else:
 						val_no_improve += 1
 
-						if val_no_improve >= int(drop_lr_frq):
-							print('dropping lr...')
-							val_no_improve = 0
-							drop_lr_frq += 1
-							lr_total = 0
-							lr_num = 0
-							for param_group in optimizer.param_groups:
-								if param_group['lr'] >= 2e-5:
-									param_group['lr'] *= 0.5
-								lr_total += param_group['lr']
-								lr_num += 1
-							print('curr avg lr is {}'.format(lr_total / lr_num))
+					if val_no_improve >= int(drop_lr_frq):
+						print('dropping lr...')
+						val_no_improve = 0
+						drop_lr_frq += 1
+						lr_total = 0
+						lr_num = 0
+						for param_group in optimizer.param_groups:
+							if param_group['lr'] > 1e-5:
+								param_group['lr'] *= 0.5
+							else:
+								param_group['lr'] = LR
+
+							lr_total += param_group['lr']
+							lr_num += 1
+						drop_lr_frq = 0
+						print('curr avg lr is {}'.format(lr_total / lr_num))
 
 					state['cur_model_state'] = model.state_dict()
 					state['cur_opt_state'] = optimizer.state_dict()

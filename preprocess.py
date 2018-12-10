@@ -4,10 +4,6 @@ import numpy as np
 from tqdm import tqdm
 from dataloader import H5DataSource, MyDataLoader
 
-train_file = '/home/zydq/Datasets/LCZ/training.h5'
-val_file = '/home/zydq/Datasets/LCZ/validation.h5'
-mean_std_file = '/home/zydq/Datasets/LCZ/mean_std_f_trainval.h5'
-
 
 def preprocess_batch(x_b, mean=None, std=None):
 	VH_ORG = x_b[:, :, :, :2]
@@ -60,9 +56,112 @@ def preprocess_batch(x_b, mean=None, std=None):
 	return x_b
 
 
-def prepare_batch(x_b, y_b, mean=None, std=None):
+def preprocess_batch_1(x_b, mean=None, std=None):
+	VH_ORG = x_b[:, :, :, :2]
+	VH_ORG_A = torch.norm(VH_ORG, dim=-1)[:, :, :, None]
+	# VH_ORG_IN = VH_ORG_A ** 2
+	VH = torch.cat([VH_ORG, VH_ORG_A], dim=-1)  # 0 ,3
+
+	VV_ORG = x_b[:, :, :, 2:4]
+	VV_ORG_A = torch.norm(VV_ORG, dim=-1)[:, :, :, None]
+	# VV_ORG_IN = VV_ORG_A ** 2
+	VV = torch.cat([VV_ORG, VV_ORG_A], dim=-1)  # 1 ,3
+
+	VV_VH_ORG = VH_ORG + VV_ORG * np.sqrt(1 / 2)
+	VV_VH_ORG_A = torch.norm(VV_VH_ORG, dim=-1)[:, :, :, None]
+	VV_VH = torch.cat([VV_VH_ORG, VV_VH_ORG_A], dim=-1)  # 2, 3
+
+	VV_M_VH_ORG = VH_ORG - VV_ORG * np.sqrt(1 / 2)
+	VV_M_VH_ORG_A = torch.norm(VV_M_VH_ORG, dim=-1)[:, :, :, None]
+	VV_M_VH = torch.cat([VV_M_VH_ORG, VV_M_VH_ORG_A], dim=-1)  # 3, 3
+
+	VH_LEE_A = torch.sqrt(x_b[:, :, :, 4:5])
+	VH_LEE_RI = VH_ORG * (VH_LEE_A / (VH_ORG_A + 1e-20))
+	VH_LEE = torch.cat([VH_LEE_RI, VH_LEE_A], dim=-1)  # 4, 3
+
+	VV_LEE_A = torch.sqrt(x_b[:, :, :, 5:6])
+	VV_LEE_RI = VV_ORG * (VV_LEE_A / (VV_ORG_A + 1e-20))
+	VV_LEE = torch.cat([VV_LEE_RI, VV_LEE_A], dim=-1)  # 5, 3
+
+	CO_RI = x_b[:, :, :, 6:8]
+	CO_A = torch.norm(CO_RI, dim=-1)[:, :, :, None]
+	CO = torch.cat([CO_RI, CO_A], dim=-1)  # 6, 3
+
+	VH_LEE_IN = x_b[:, :, :, 4:5]
+	VV_LEE_IN = x_b[:, :, :, 5:6]
+	Rc = x_b[:, :, :, 6:7]
+
+	VV_VH_LEE1_IN = VH_LEE_IN + VV_LEE_IN / 2 + Rc
+	VV_VH_LEE1_A = torch.sqrt(VV_VH_LEE1_IN)
+	VV_M_VH_LEE1_IN = VH_LEE_IN + VV_LEE_IN / 2 - Rc
+	VV_M_VH_LEE1_A = torch.sqrt(VV_M_VH_LEE1_IN)
+
+	VV_VH_LEE_RI = VV_LEE_RI + VH_LEE_RI * np.sqrt(1 / 2)
+	VV_VH_LEE_A = torch.norm(VV_VH_LEE_RI, dim=-1)[:, :, :, None]
+	VV_VH_LEE = torch.cat([VV_VH_LEE_RI, VV_VH_LEE_A, VV_VH_LEE1_A], dim=-1)  # 7, 4
+
+	VV_M_VH_LEE_RI = VV_LEE_RI - VH_LEE_RI * np.sqrt(1 / 2)
+	VV_M_VH_LEE_A = torch.norm(VV_VH_LEE_RI, dim=-1)[:, :, :, None]
+	VV_M_VH_LEE = torch.cat([VV_M_VH_LEE_RI, VV_M_VH_LEE_A, VV_M_VH_LEE1_A], dim=-1)  # 8, 4
+
+	x_b = torch.cat([VH, VV, VV_VH, VV_M_VH,
+					 VH_LEE, VV_LEE, CO,
+					 VV_VH_LEE, VV_M_VH_LEE,
+					 x_b[:, :, :, 8:]], dim=-1)
+
+	if mean is not None and std is not None:
+		x_b = (x_b - mean[None, None, None, :]) / std[None, None, None, :]
+	# x_b = (x_b - mean[None, :, :, :]) / std[None, :, :, :]
+	return x_b
+
+
+def data_aug_1(x_b):
+	batch_size = x_b.size(0)
+
+	#  flip v
+	random_idx = torch.arange(batch_size).masked_select(torch.rand(batch_size) > 0.5).long()
+	x_b[random_idx] = x_b[random_idx].flip(1)
+
+	# flip h
+	random_idx = torch.arange(batch_size).masked_select(torch.rand(batch_size) > 0.5).long()
+
+	x_b[random_idx] = x_b[random_idx].flip(2)
+
+	# transpose
+	random_idx = torch.arange(batch_size).masked_select(torch.rand(batch_size) > 0.5).long()
+	x_b[random_idx] = x_b[random_idx].transpose(1, 2)
+
+	return x_b
+
+
+def data_aug(x_b):
+	batch_size = x_b.shape[0]
+
+	random_idx = np.arange(batch_size)[np.random.rand(batch_size) > 0.5]
+	x_b[random_idx] = np.flip(x_b[random_idx], 1)
+
+	random_idx = np.arange(batch_size)[np.random.rand(batch_size) > 0.5]
+	x_b[random_idx] = np.flip(x_b[random_idx], 2)
+
+	random_idx = np.arange(batch_size)[np.random.rand(batch_size) > 0.5]
+	x_b[random_idx] = np.transpose(x_b[random_idx], (0, 2, 1, 3))
+
+	random_idx = np.arange(batch_size)[np.random.rand(batch_size) > 0.5]
+	x_b[random_idx] = np.rot90(x_b[random_idx], 1, axes=(1, 2))
+
+	random_idx = np.arange(batch_size)[np.random.rand(batch_size) > 0.5]
+	x_b[random_idx] = np.rot90(x_b[random_idx], 2, axes=(1, 2))
+
+	return x_b
+
+
+def prepare_batch(x_b, y_b, mean=None, std=None, aug=False):
 	# x_b = (x_b - mean[None, None, None, :]) / std[None, None, None, :]
 	# x_b = (x_b - mean[None, :, :, :]) / std[None, :, :, :]
+
+	if aug:
+		x_b = data_aug(x_b)
+
 	x_b = torch.from_numpy(x_b).float().cuda()
 
 	x_b = preprocess_batch(x_b, mean, std)
@@ -80,6 +179,10 @@ def prepare_batch(x_b, y_b, mean=None, std=None):
 
 
 if __name__ == '__main__':
+	train_file = '/home/zydq/Datasets/LCZ/training.h5'
+	val_file = '/home/zydq/Datasets/LCZ/validation.h5'
+	mean_std_file = '/home/zydq/Datasets/LCZ/mean_std_f_trainval.h5'
+
 	init_data_source = H5DataSource([train_file, val_file], 5000, shuffle=False, split=False)
 	init_loader = MyDataLoader(init_data_source.h5fids, init_data_source.indices)
 	mean, std, n = 0, 0, 0
