@@ -14,8 +14,7 @@ SEED = 502
 EPOCH = 150
 BATCH_SIZE = 128
 LR = 1.5e-4
-PRE_HEAT_LR = 1e-5
-LR_CICLE = 3000
+WARM_UP_LR = 1e-5
 USE_CLASS_WEIGHT = True
 MODEL = 'GAC'
 # MODEL = 'LCZ'
@@ -88,7 +87,7 @@ if __name__ == '__main__':
 	else:
 		criteria1 = nn.NLLLoss().cuda()
 	criteria2 = nn.NLLLoss().cuda()
-	optimizer = torch.optim.Adam(model.parameters(), lr=PRE_HEAT_LR)
+	optimizer = torch.optim.Adam(model.parameters(), lr=WARM_UP_LR)
 
 	if os.path.isfile(cur_model_path):
 		print('load training param, ', cur_model_path)
@@ -215,7 +214,7 @@ if __name__ == '__main__':
 						lr_num = 0
 						for param_group in optimizer.param_groups:
 							if param_group['lr'] > 1e-5:
-								param_group['lr'] *= 0.5
+								param_group['lr'] *= 0.6
 							else:
 								param_group['lr'] = LR
 

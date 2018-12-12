@@ -1,3 +1,4 @@
+import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -5,11 +6,13 @@ from .common_layers import *
 from .cbam import CBAM_Module
 
 
-def CBAM_Conv(in_c, out_c, kernel, stride, padding, reduction=8, dropout=0.0, bn=True):
+def CBAM_Conv(in_c, out_c, kernel, stride, padding, reduction=8, dropout=0.0, pool=None, bn=True):
 	conv = [BasicConv(in_c, out_c, kernel, 1, padding, bn=bn),
 			BasicConv(out_c, out_c, kernel, stride, padding, bn=bn),
 			CBAM_Module(out_c, reduction),
 			]
+	if pool is not None:
+		conv.append(pool)
 	if dropout > 0:
 		conv.append(nn.Dropout(dropout))
 	return nn.Sequential(*conv)
@@ -36,15 +39,23 @@ class GACNet(nn.Module):
 		group_feature_dim = 0
 		for group_size in group_sizes:
 			n_fileter = base_size * max(group_size, 2)
-			self.groups.append(CBAM_Conv(group_size, n_fileter, 3, 2, 1, n_fileter // 2, 0.5, bn))
-			# self.groups.append(AlignConv(group_size, n_fileter, 3, 2, 1, 0.5, bn))
+			self.groups.append(
+				CBAM_Conv(group_size, n_fileter,
+						  kernel=3, stride=1, padding=1,
+						  reduction=2, dropout=0.5,
+						  pool=nn.MaxPool2d(2, 2), bn=bn))  # 16 * 16
 			group_feature_dim += n_fileter
 
 		self.bottelneck = nn.Sequential(
-										AlignConv(group_feature_dim, 512, 3, 2, 1, 0.3, bn=bn),
-										CBAM_Conv(512, 1024, 3, 2, 1, 8, 0.3, bn=bn),
-										# AlignConv(512, 1024, 3, 2, 1, 0.3, bn=bn)
-										)
+			CBAM_Conv(group_feature_dim, 512,
+					  kernel=3, stride=1, padding=1,
+					  reduction=8, dropout=0.3,
+					  pool=nn.MaxPool2d(2, 2), bn=bn),  # 8 * 8
+			CBAM_Conv(512, 1024,
+					  kernel=3, stride=1, padding=1,
+					  reduction=8, dropout=0.3,
+					  pool=nn.MaxPool2d(2, 2), bn=bn),  # 4 * 4
+		)
 
 		# self.classifier = nn.Linear(1024, 17)
 		self.classifier = HierarchicalClassifier(1024, class_nodes)
@@ -64,9 +75,11 @@ class GACNet(nn.Module):
 		out = self.bottelneck(out)  # b, 16*base, s/4, s/4
 
 		out = F.max_pool2d(out, 4, stride=1)
+
 		out = out.view(out.size(0), -1)
 
-		node_out, out = self.classifier(out)
-		return node_out, out
 		# out = F.softmax(self.classifier(out), dim=-1)
 		# return out
+		node_out, out = self.classifier(out)
+		return node_out, out
+
