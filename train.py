@@ -9,6 +9,7 @@ from dataloader import MyDataLoader, H5DataSource
 from preprocess import prepare_batch
 from modules.lcz_net import LCZNet
 from modules.gac_net import GACNet
+from modules.lcz_res_net import resnet18, resnet34, resnet50, resnet101
 
 SEED = 502
 EPOCH = 150
@@ -17,10 +18,13 @@ LR = 1.5e-4
 WARM_UP_LR = 1e-5
 USE_CLASS_WEIGHT = True
 MODEL = 'GAC'
+# MODEL = 'RES'
 # MODEL = 'LCZ'
 train_file = '/home/zydq/Datasets/LCZ/training.h5'
 val_file = '/home/zydq/Datasets/LCZ/validation.h5'
 mean_std_file = '/home/zydq/Datasets/LCZ/mean_std_f_trainval.h5'
+mean_std_file_train = '/home/zydq/Datasets/LCZ/mean_std_f_train.h5'
+mean_std_file_val = '/home/zydq/Datasets/LCZ/mean_std_f_val.h5'
 
 model_dir = './checkpoints/model_' + str(round(time.time() % 100000))
 # model_dir = './checkpoints/model_20930'  #GACNet with class weight  8903
@@ -33,13 +37,25 @@ cur_model_path = os.path.join(model_dir, 'state_curr.ckpt')
 
 if __name__ == '__main__':
 
-	mean_std_h5 = h5py.File(mean_std_file, 'r')
-	N_CHANNEL = mean_std_h5['mean'].shape[-1]
-	mean = torch.from_numpy(np.array(mean_std_h5['mean']).reshape(-1, N_CHANNEL).mean(0)).float().cuda()
-	std = torch.from_numpy(np.sqrt((np.array(mean_std_h5['std']).reshape(-1, N_CHANNEL) ** 2).mean(0))).float().cuda()
+	mean_std_h5_train = h5py.File(mean_std_file_train, 'r')
+	N_CHANNEL = mean_std_h5_train['mean'].shape[-1]
+	mean_train = torch.from_numpy(np.array(mean_std_h5_train['mean']).reshape(-1, N_CHANNEL).mean(0)).float().cuda()
+	std_train = torch.from_numpy(
+		np.sqrt((np.array(mean_std_h5_train['std']).reshape(-1, N_CHANNEL) ** 2).mean(0))).float().cuda()
 	# mean = torch.from_numpy(np.array(mean_std_h5['mean'])).float().cuda()
 	# std = torch.from_numpy(np.array(mean_std_h5['std'])).float().cuda()
-	mean_std_h5.close()
+	mean_std_h5_train.close()
+
+	mean_std_h5_val = h5py.File(mean_std_file_val, 'r')
+	mean_val = torch.from_numpy(np.array(mean_std_h5_val['mean']).reshape(-1, N_CHANNEL).mean(0)).float().cuda()
+	std_val = torch.from_numpy(
+		np.sqrt((np.array(mean_std_h5_val['std']).reshape(-1, N_CHANNEL) ** 2).mean(0))).float().cuda()
+	# mean = torch.from_numpy(np.array(mean_std_h5['mean'])).float().cuda()
+	# std = torch.from_numpy(np.array(mean_std_h5['std'])).float().cuda()
+	mean_std_h5_val.close()
+	mean = [mean_train, mean_val]
+	std = [std_train, std_val]
+	mean, std = None, None
 
 	# train val 合并再划分
 	# data_source = H5DataSource([train_file, val_file], BATCH_SIZE, split=0.1, seed=SEED)
@@ -53,26 +69,36 @@ if __name__ == '__main__':
 	# val_loader = MyDataLoader(val_source.h5fids, val_source.indices)
 
 	# 只用val
-	# data_source = H5DataSource([val_file], BATCH_SIZE, split=0.1, seed=SEED)
+	data_source = H5DataSource([val_file], BATCH_SIZE, split=0.1, seed=SEED)
+	train_loader = MyDataLoader(data_source.h5fids, data_source.train_indices)
+	val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
+
+	# 合并再划分 val 中 1:2
+	# data_source = H5DataSource([train_file, val_file], BATCH_SIZE, [0.02282, 2 / 3], seed=SEED)
 	# train_loader = MyDataLoader(data_source.h5fids, data_source.train_indices)
 	# val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
 
-	# 合并再划分 val 中 1:2
-	data_source = H5DataSource([train_file, val_file], BATCH_SIZE, [0.02282, 2 / 3], seed=SEED)
-	train_loader = MyDataLoader(data_source.h5fids, data_source.train_indices)
-	val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
 	class_weights = torch.from_numpy(data_source.class_weights).float().cuda().clamp(0, 1)
+	# class_weights[4] = 1.3
+	# class_weights[6] = 1.1
+	# class_weights[9] = 1.2
+	# class_weights[11] = 1.2
+	# class_weights[15] = 1.2
 	print(class_weights)
 
 	if MODEL == 'LCZ':
 		model = LCZNet(channel=N_CHANNEL, n_class=17, base=64, dropout=0.3)
 	elif MODEL == 'GAC':
-		group_sizes = [2, 2, 2, 2, 2,
-					   3, 3, 1, 1, 2]
+		group_sizes = [4, 4, 2, 4, 2,
+					   3, 3, 2, 2]
 		# group_sizes = [3, 3, 3, 3, 3, 3, 3, 4, 4,
 		# 			   3, 3, 1, 1, 2]
 		class_nodes = [3, 3, 4, 4, 3]
 		model = GACNet(group_sizes, class_nodes, 32)
+	elif MODEL == 'RES':
+		class_nodes = [3, 3, 4, 4, 3]
+		# model = resnet34(N_CHANNEL, class_nodes)
+		model = resnet101(N_CHANNEL, class_nodes)
 	else:
 		model = LCZNet(channel=N_CHANNEL, n_class=17, base=64, dropout=0.3)
 
@@ -87,7 +113,7 @@ if __name__ == '__main__':
 	else:
 		criteria1 = nn.NLLLoss().cuda()
 	criteria2 = nn.NLLLoss().cuda()
-	optimizer = torch.optim.Adam(model.parameters(), lr=WARM_UP_LR)
+	optimizer = torch.optim.Adam(model.parameters(), lr=WARM_UP_LR, weight_decay=1e-5)
 
 	if os.path.isfile(cur_model_path):
 		print('load training param, ', cur_model_path)
@@ -116,8 +142,8 @@ if __name__ == '__main__':
 	for e in epoch_list:
 		step = 0
 		with tqdm(total=len(train_loader)) as bar:
-			for i, (train_data, train_label) in enumerate(train_loader):
-				train_input, train_target = prepare_batch(train_data, train_label, mean, std, aug=True)
+			for i, (train_data, train_label, f_idx_train) in enumerate(train_loader):
+				train_input, train_target = prepare_batch(train_data, train_label, f_idx_train, mean, std, aug=True)
 				model.train()
 				optimizer.zero_grad()
 				# train_out = model(train_input)
@@ -163,8 +189,8 @@ if __name__ == '__main__':
 					val_sample = 0
 					with torch.no_grad():
 						model.eval()
-						for val_data, val_label in val_loader:
-							val_input, val_target = prepare_batch(val_data, val_label, mean, std)
+						for val_data, val_label, f_idx_val in val_loader:
+							val_input, val_target = prepare_batch(val_data, val_label, f_idx_val, mean, std)
 							# val_out = model(val_input)
 							val_node_out, val_out = model(val_input)
 							val_loss_total += criteria1(torch.log(val_out), val_target[:, 5:].max(-1)[1]).item()

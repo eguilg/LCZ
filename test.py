@@ -7,21 +7,27 @@ from dataloader import MyDataLoader, H5DataSource
 from preprocess import prepare_batch
 from modules.lcz_net import LCZNet
 from modules.gac_net import GACNet
+from modules.lcz_res_net import resnet18, resnet34, resnet50
 
 import torchvision.models as models
 
 BATCH_SIZE = 32
 test_file = '/home/zydq/Datasets/LCZ/round1_test_a_20181109.h5'
-mean_std_file = '/home/zydq/Datasets/LCZ/mean_std_f_trainval.h5'
+mean_std_file = '/home/zydq/Datasets/LCZ/mean_std_f_test.h5'
 
 MODEL = 'GAC'
+# MODEL = 'RES'
 # MODEL = 'LCZ'
 
 # model_dir = './checkpoints/model_20930'  # GACNet + class weight  8903  0.770
 # model_dir = './checkpoints/model_69737'  # GACNet no class weight  8857  0.780
 # model_dir = './checkpoints/model_2234'  # LCZNet + class weight  8773 0.743
 
-model_dir = './checkpoints/model_1451'  # GACNet + class weight<1 + data_aug
+# model_dir = './checkpoints/model_1451'  # GACNet + class weight<1 + data_aug  9025 0.768
+model_dir = './checkpoints/model_11257'  # GACNet + class weight<1 + data_aug + phi
+model_dir = './checkpoints/model_68909'  # GACNet + class weight<1 + data_aug + phi + trained on val
+
+
 cur_model_path = os.path.join(model_dir, 'state_curr.ckpt')
 
 if not os.path.isdir('./submit/'):
@@ -32,11 +38,13 @@ if __name__ == '__main__':
 
 	mean_std_h5 = h5py.File(mean_std_file, 'r')
 	N_CHANNEL = mean_std_h5['mean'].shape[-1]
-	mean = torch.from_numpy(np.array(mean_std_h5['mean']).reshape(-1, N_CHANNEL).mean(0)).cuda()
-	std = torch.from_numpy(np.sqrt((np.array(mean_std_h5['std']).reshape(-1, N_CHANNEL) ** 2).mean(0))).cuda()
+	mean = [torch.from_numpy(np.array(mean_std_h5['mean']).reshape(-1, N_CHANNEL).mean(0)).cuda()]
+	std = [torch.from_numpy(np.sqrt((np.array(mean_std_h5['std']).reshape(-1, N_CHANNEL) ** 2).mean(0))).cuda()]
 	# mean = torch.from_numpy(np.array(mean_std_h5['mean'])).float().cuda()
 	# std = torch.from_numpy(np.array(mean_std_h5['std'])).float().cuda()
 	mean_std_h5.close()
+
+	mean, std = None, None
 
 	data_source = H5DataSource([test_file], BATCH_SIZE, shuffle=False)
 	test_loader = MyDataLoader(data_source.h5fids, data_source.indices)
@@ -44,12 +52,16 @@ if __name__ == '__main__':
 	if MODEL == 'LCZ':
 		model = LCZNet(channel=N_CHANNEL, n_class=17, base=64, dropout=0.3)
 	elif MODEL == 'GAC':
-		group_sizes = [2, 2, 2, 2, 2,
-					   3, 3, 1, 1, 2]
+		group_sizes = [4, 4, 2, 4, 2,
+					   3, 3, 2, 2]
 		# group_sizes = [3, 3, 3, 3, 3, 3, 3, 4, 4,
 		# 			   3, 3, 1, 1, 2]
 		class_nodes = [3, 3, 4, 4, 3]
 		model = GACNet(group_sizes, class_nodes, 32)
+	elif MODEL == 'RES':
+		class_nodes = [3, 3, 4, 4, 3]
+		# model = resnet34(N_CHANNEL, class_nodes)
+		model = resnet34(N_CHANNEL, class_nodes)
 	else:
 		model = LCZNet(channel=N_CHANNEL, n_class=17, base=64, dropout=0.3)
 
@@ -70,8 +82,8 @@ if __name__ == '__main__':
 	total_score = None
 	with torch.no_grad():
 		model.eval()
-		for test_data, _ in tqdm(test_loader):
-			test_input, _ = prepare_batch(test_data, None, mean, std)
+		for test_data, _, fidx in tqdm(test_loader):
+			test_input, _ = prepare_batch(test_data, None, fidx, mean, std)
 			test_node_out, test_out = model(test_input)
 			pred = test_out.max(-1)[1].detach().cpu().numpy()
 			score = test_out.detach().cpu().numpy()

@@ -38,7 +38,7 @@ class GACNet(nn.Module):
 		self.groups = nn.ModuleList()
 		group_feature_dim = 0
 		for group_size in group_sizes:
-			n_fileter = base_size * max(group_size, 2)
+			n_fileter = base_size * min(group_size, 3)
 			self.groups.append(
 				CBAM_Conv(group_size, n_fileter,
 						  kernel=3, stride=1, padding=1,

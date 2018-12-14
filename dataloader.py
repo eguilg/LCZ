@@ -81,7 +81,7 @@ class _MyDataIter(object):
 				),
 				axis=3)
 		)
-		return x_b, y_b
+		return x_b, y_b, f_idx
 
 
 if __name__ == '__main__':
