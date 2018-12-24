@@ -28,6 +28,11 @@ MODEL = 'GAC'
 
 # model_dir = './checkpoints/model_1451'  # GACNet + class weight<1 + data_aug
 model_dir = './checkpoints/model_11257'  # GACNet + class weight<1 + data_aug + phi
+model_dir = './checkpoints/model_85726'  # GACNet + class weight<1 + data_aug + phi
+
+model_dir = './checkpoints/model_80240'  #  FOCAL  trained on train+val
+model_dir = './checkpoints/model_18996'  #  FOCAL  indices trained on train+val2
+
 cur_model_path = os.path.join(model_dir, 'state_curr.ckpt')
 
 if not os.path.isdir('./evaluate/'):
@@ -55,6 +60,11 @@ if __name__ == '__main__':
 
 	mean, std = None, None
 
+	# train val 合并再划分
+	# data_source = H5DataSource([train_file, val_file], BATCH_SIZE, split=0.07, seed=SEED)
+	# train_loader = MyDataLoader(data_source.h5fids, data_source.train_indices)
+	# val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
+
 	# 合并再划分 val 中 1:2
 	data_source = H5DataSource([train_file, val_file], BATCH_SIZE, [0.02282, 2 / 3], seed=SEED)
 	train_loader = MyDataLoader(data_source.h5fids, data_source.train_indices)
@@ -65,8 +75,9 @@ if __name__ == '__main__':
 	if MODEL == 'LCZ':
 		model = LCZNet(channel=N_CHANNEL, n_class=17, base=64, dropout=0.3)
 	elif MODEL == 'GAC':
-		group_sizes = [4, 4, 2, 4, 2,
-					   3, 3, 1, 1, 2]
+		group_sizes = [3, 3,
+					   3, 3, 2, 2,
+					   4, 3, 3]
 		# group_sizes = [3, 3, 3, 3, 3, 3, 3, 4, 4,
 		# 			   3, 3, 1, 1, 2]
 		class_nodes = [3, 3, 4, 4, 3]

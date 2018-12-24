@@ -9,151 +9,76 @@ from dataloader import H5DataSource, MyDataLoader
 def preprocess_batch(x_b, mean=None, std=None):
 	VH_ORG = x_b[:, :, :, :2]
 	VH_ORG_A = torch.norm(VH_ORG, dim=-1)[:, :, :, None]
-	VH_ORG_SIGN = (VH_ORG[:, :, :, 1:2] > 0).float().float() * 2 - 1
-	VH_ORG_PHI = VH_ORG_SIGN * (VH_ORG[:, :, :, 0:1] / (VH_ORG_A + 1e-20) + 1)
-
 	VV_ORG = x_b[:, :, :, 2:4]
 	VV_ORG_A = torch.norm(VV_ORG, dim=-1)[:, :, :, None]
-	VV_ORG_SIGN = (VV_ORG[:, :, :, 1:2] > 0).float() * 2 - 1
-	VV_ORG_PHI = VV_ORG_SIGN * (VV_ORG[:, :, :, 0:1] / (VV_ORG_A + 1e-20) + 1)
-
-	VV_VH_ORG = VH_ORG + VV_ORG * math.sqrt(1 / 2)
-	VV_VH_ORG_A = torch.norm(VV_VH_ORG, dim=-1)[:, :, :, None]
-	VV_VH_ORG_SIGN = (VV_VH_ORG[:, :, :, 1:2] > 0).float() * 2 - 1
-	VV_VH_ORG_PHI = VV_VH_ORG_SIGN * (VV_VH_ORG[:, :, :, 0:1] / (VV_VH_ORG_A + 1e-20) + 1)
-
-	VV_M_VH_ORG = VH_ORG - VV_ORG * math.sqrt(1 / 2)
+	VV_M_VH_ORG = VH_ORG - VV_ORG
 	VV_M_VH_ORG_A = torch.norm(VV_M_VH_ORG, dim=-1)[:, :, :, None]
-	VV_M_VH_ORG_SIGN = (VV_M_VH_ORG[:, :, :, 1:2] > 0).float() * 2 - 1
-	VV_M_VH_ORG_PHI = VV_M_VH_ORG_SIGN * (VV_M_VH_ORG[:, :, :, 0:1] / (VV_M_VH_ORG_A + 1e-20) + 1)
-
-	ORG_BANDS = torch.cat([
-		1 - torch.exp(-math.sqrt(2) * VH_ORG_A),
-		(VH_ORG_PHI + 2) / 4,
-		1 - torch.exp(-VV_ORG_A),
-		(VV_ORG_PHI + 2) / 4,
-		1 - torch.exp(-VV_VH_ORG_A),
-		(VV_VH_ORG_PHI + 2) / 4,
-		1 - torch.exp(-VV_M_VH_ORG_A),
-		(VV_M_VH_ORG_PHI + 2) / 4
-	], dim=-1)
 
 	VH_LEE_A = torch.sqrt(x_b[:, :, :, 4:5])
-	VH_LEE_RI = VH_ORG * (VH_LEE_A / (VH_ORG_A + 1e-20))
-
 	VV_LEE_A = torch.sqrt(x_b[:, :, :, 5:6])
-	VV_LEE_RI = VV_ORG * (VV_LEE_A / (VV_ORG_A + 1e-20))
-
-	VV_VH_LEE_RI = VH_LEE_RI + VV_LEE_RI * math.sqrt(1 / 2)
-	VV_VH_LEE_A = torch.norm(VV_VH_LEE_RI, dim=-1)[:, :, :, None]
-	VV_VH_LEE_SIGN = (VV_VH_LEE_RI[:, :, :, 1:2] > 0).float() * 2 - 1
-	VV_VH_LEE_PHI = VV_VH_LEE_SIGN * (VV_VH_LEE_RI[:, :, :, 0:1] / (VV_VH_LEE_A + 1e-20) + 1)
-
-	VV_M_VH_LEE_RI = VH_LEE_RI - VV_LEE_RI * math.sqrt(1 / 2)
-	VV_M_VH_LEE_A = torch.norm(VV_M_VH_LEE_RI, dim=-1)[:, :, :, None]
-	VV_M_VH_LEE_SIGN = (VV_M_VH_LEE_RI[:, :, :, 1:2] > 0).float() * 2 - 1
-	VV_M_VH_LEE_PHI = VV_M_VH_LEE_SIGN * (VV_M_VH_LEE_RI[:, :, :, 0:1] / (VV_M_VH_LEE_A + 1e-20) + 1)
-
 	CO_RI = x_b[:, :, :, 6:8]
 	CO_A = torch.norm(CO_RI, dim=-1)[:, :, :, None]
-	CO_SIGN = (CO_RI[:, :, :, 1:2] > 0).float() * 2 - 1
-	CO_PHI = CO_SIGN * (CO_RI[:, :, :, 0:1] / (CO_A + 1e-20) + 1)
-
-	LEE_BANDS = torch.cat([
-		1 - torch.exp(-math.sqrt(2) * VH_LEE_A),
+	S1_BANDS = torch.cat([
+		1 - torch.exp(-VH_ORG_A),
+		1 - torch.exp(-VV_ORG_A),
+		1 - torch.exp(-VV_M_VH_ORG_A),
+		1 - torch.exp(-VH_LEE_A),
 		1 - torch.exp(-VV_LEE_A),
-		1 - torch.exp(-VV_VH_LEE_A),
-		(VV_VH_LEE_PHI + 2) / 4,
-		1 - torch.exp(-VV_M_VH_LEE_A),
-		(VV_M_VH_LEE_PHI + 2) / 4,
 		1 - torch.exp(-CO_A),
-		(CO_PHI + 2) / 4
+	], dim=-1)
+	S2_BANDS = x_b[:, :, :, 8:]
+
+	# B8 & b4
+	L = 0.428
+	SAVI = (S2_BANDS[:,:,:,6:7] - S2_BANDS[:,:,:,2:3]) / (S2_BANDS[:,:,:,6:7] + S2_BANDS[:,:,:,2:3] + L) * (1.0 + L) # -0.65 ~ 0.65
+	SAVI = (SAVI + 0.65) / 1.3  # B8 & B4
+	PSSR = (S2_BANDS[:,:,:,6:7] / S2_BANDS[:,:,:,2:3].clamp_min(1e-20) - 0.058) / (17.157 - 0.058)
+	PSSR = PSSR.clamp(0, 1)  # b8 & b4
+	NDVI = (S2_BANDS[:, :, :, 6:7] - S2_BANDS[:, :, :, 2:3]) / (S2_BANDS[:, :, :, 6:7] + S2_BANDS[:, :, :, 2:3]).clamp_min(1e-20)
+	NDVI = (NDVI + 1) / 2  # b8 & b4
+	UCNDVI = 1 - 2*torch.sqrt((S2_BANDS[:, :, :, 6:7] * 0.02)**2 + (S2_BANDS[:, :, :, 2:3] * 0.03) **2); # uncertainty of NDVI
+
+	# B8 & B11 / B12
+	NDWI = (S2_BANDS[:,:,:,6:7] - S2_BANDS[:,:,:,8:9]) / (S2_BANDS[:,:,:,6:7] + S2_BANDS[:,:,:,8:9]).clamp_min(1e-20)
+	NDWI = (NDWI + 1) / 2
+	MSI = (S2_BANDS[:, :, :, 8:9] / S2_BANDS[:, :, :, 6:7].clamp_min(1e-20) - 0.058) / (17.145 - 0.058)
+	MSI = MSI.clamp(0, 1)
+	NBR = (S2_BANDS[:,:,:,6:7] - S2_BANDS[:,:,:,9:10]) / (S2_BANDS[:,:,:,6:7] + S2_BANDS[:,:,:,9:10]).clamp_min(1e-20)
+	NBR = (NBR + 1) / 2
+
+	# lower wave length
+	MCARI = ((S2_BANDS[:,:,:,3:4] - S2_BANDS[:,:,:,2:3]) - 0.2 * (S2_BANDS[:,:,:,3:4] - S2_BANDS[:,:,:,1:2])) * (S2_BANDS[:,:,:,3:4] / S2_BANDS[:,:,:,1:2].clamp_min(1e-20));
+	MCARI = ((MCARI - (-1.03))/(4.606 + 1.03)).clamp(0, 1)
+	GNDVI = (S2_BANDS[:, :, :, 6:7] - S2_BANDS[:, :, :, 1:2]) / (S2_BANDS[:, :, :, 6:7] + S2_BANDS[:, :, :, 1:2]).clamp_min(1e-20)
+	GNDVI = (GNDVI + 1) / 2
+	CHLRED = (S2_BANDS[:, :, :, 3:4] / S2_BANDS[:, :, :, 5:6].clamp_min(1e-20) - 0.058) / (17.149 - 0.058)
+	CHLRED = CHLRED.clamp(0, 1)
+
+	INDICE_BANDS = torch.cat([
+		SAVI, PSSR, NDVI, UCNDVI, NDWI, MSI, NBR, MCARI, GNDVI, CHLRED
 	], dim=-1)
 
-	x_b = torch.cat([ORG_BANDS,  # 0 8
-					 LEE_BANDS,  # 1 8
-					 x_b[:, :, :, 8:]], dim=-1)
+	x_b = torch.cat([
+		S1_BANDS,  # 0 6
+		S2_BANDS,  # 1 10
+		INDICE_BANDS # 2 4, 3, 3
+	 ], dim=-1)
+
+
 
 	if mean is not None and std is not None:
 		x_b = (x_b - mean[None, None, None, :]) / std[None, None, None, :]
 	# x_b = (x_b - mean[None, :, :, :]) / std[None, :, :, :]
 	return x_b
 
-
-def preprocess_batch_org(x_b, mean=None, std=None):
-	VH_ORG = x_b[:, :, :, :2]
-	VH_ORG_A = torch.norm(VH_ORG, dim=-1)[:, :, :, None]
-	VH_ORG_SIGN = (VH_ORG[:, :, :, 1:2] > 0).float().float() * 2 - 1
-	VH_ORG_PHI = VH_ORG_SIGN * torch.sigmoid(VH_ORG[:, :, :, 1:2] / (VH_ORG[:, :, :, 0:1] + 1e-20))
-
-	VV_ORG = x_b[:, :, :, 2:4]
-	VV_ORG_A = torch.norm(VV_ORG, dim=-1)[:, :, :, None]
-	VV_ORG_SIGN = (VV_ORG[:, :, :, 1:2] > 0).float() * 2 - 1
-	VV_ORG_PHI = VV_ORG_SIGN * torch.sigmoid(VV_ORG[:, :, :, 1:2] / (VV_ORG[:, :, :, 0:1] + 1e-20))
-
-	VV_VH_ORG = VH_ORG + VV_ORG * math.sqrt(1 / 2)
-	VV_VH_ORG_A = torch.norm(VV_VH_ORG, dim=-1)[:, :, :, None]
-	VV_VH_ORG_SIGN = (VV_VH_ORG[:, :, :, 1:2] > 0).float() * 2 - 1
-	VV_VH_ORG_PHI = VV_VH_ORG_SIGN * torch.sigmoid(VV_VH_ORG[:, :, :, 1:2] / (VV_VH_ORG[:, :, :, 0:1] + 1e-20))
-
-	VV_M_VH_ORG = VH_ORG - VV_ORG * math.sqrt(1 / 2)
-	VV_M_VH_ORG_A = torch.norm(VV_M_VH_ORG, dim=-1)[:, :, :, None]
-	VV_M_VH_ORG_SIGN = (VV_M_VH_ORG[:, :, :, 1:2] > 0).float() * 2 - 1
-	VV_M_VH_ORG_PHI = VV_M_VH_ORG_SIGN * torch.sigmoid(VV_M_VH_ORG[:, :, :, 1:2] / (VV_M_VH_ORG[:, :, :, 0:1] + 1e-20))
-
-	ORG_BANDS = torch.cat([
-		1 - torch.exp(-math.sqrt(2) * VH_ORG_A),
-		(VH_ORG_PHI + 1) / 2,
-		1 - torch.exp(-VV_ORG_A),
-		(VV_ORG_PHI + 1) / 2,
-		1 - torch.exp(-VV_VH_ORG_A),
-		(VV_VH_ORG_PHI + 1) / 2,
-		1 - torch.exp(-VV_M_VH_ORG_A),
-		(VV_M_VH_ORG_PHI + 1) / 2
-	], dim=-1)
-
-	VH_LEE_A = torch.sqrt(x_b[:, :, :, 4:5])
-	VH_LEE_RI = VH_ORG * (VH_LEE_A / (VH_ORG_A + 1e-20))
-
-	VV_LEE_A = torch.sqrt(x_b[:, :, :, 5:6])
-	VV_LEE_RI = VV_ORG * (VV_LEE_A / (VV_ORG_A + 1e-20))
-
-	VV_VH_LEE_RI = VH_LEE_RI + VV_LEE_RI * math.sqrt(1 / 2)
-	VV_VH_LEE_A = torch.norm(VV_VH_LEE_RI, dim=-1)[:, :, :, None]
-	VV_VH_LEE_SIGN = (VV_VH_LEE_RI[:, :, :, 1:2] > 0).float() * 2 - 1
-	VV_VH_LEE_PHI = VV_VH_LEE_SIGN * torch.sigmoid(VV_VH_LEE_RI[:, :, :, 1:2] / (VV_VH_LEE_RI[:, :, :, 0:1] + 1e-20))
-
-	VV_M_VH_LEE_RI = VH_LEE_RI - VV_LEE_RI * math.sqrt(1 / 2)
-	VV_M_VH_LEE_A = torch.norm(VV_M_VH_LEE_RI, dim=-1)[:, :, :, None]
-	VV_M_VH_LEE_SIGN = (VV_M_VH_LEE_RI[:, :, :, 1:2] > 0).float() * 2 - 1
-	VV_M_VH_LEE_PHI = VV_M_VH_LEE_SIGN * torch.sigmoid(
-		VV_M_VH_LEE_RI[:, :, :, 1:2] / (VV_M_VH_LEE_RI[:, :, :, 0:1] + 1e-20))
-
-	CO_RI = x_b[:, :, :, 6:8]
-	CO_A = torch.norm(CO_RI, dim=-1)[:, :, :, None]
-	CO_SIGN = (CO_RI[:, :, :, 1:2] > 0).float() * 2 - 1
-	CO_PHI = CO_SIGN * torch.sigmoid(CO_RI[:, :, :, 1:2] / (CO_RI[:, :, :, 0:1] + 1e-20))
-
-	LEE_BANDS = torch.cat([
-		1 - torch.exp(-math.sqrt(2) * VH_LEE_A),
-		1 - torch.exp(-VV_LEE_A),
-		1 - torch.exp(-VV_VH_LEE_A),
-		(VV_VH_LEE_PHI + 1) / 2,
-		1 - torch.exp(-VV_M_VH_LEE_A),
-		(VV_M_VH_LEE_PHI + 1) / 2,
-		1 - torch.exp(-CO_A),
-		(CO_PHI + 1) / 2
-	], dim=-1)
-
-	x_b = torch.cat([ORG_BANDS,  # 0 8
-					 LEE_BANDS,  # 1 8
-					 x_b[:, :, :, 8:]], dim=-1)
-
-	if mean is not None and std is not None:
-		x_b = (x_b - mean[None, None, None, :]) / std[None, None, None, :]
-	# x_b = (x_b - mean[None, :, :, :]) / std[None, :, :, :]
-	return x_b
-
+# def to_wh(x_b):
+# 	xx = x_b.view(x_b.shape[0:3] + (4, 4)).transpose(3, 2)
+# 	x_b0 = xx.contiguous().view(x_b.shape[0], x_b.shape[1] * 4, x_b.shape[2] * 4)[:, :, :, None]
+# 	x_b1 = xx.flip(2).contiguous().view(x_b.shape[0], x_b.shape[1] * 4, x_b.shape[2] * 4)[:, :, :, None]
+# 	x_b2 = xx.flip(4).contiguous().view(x_b.shape[0], x_b.shape[1] * 4, x_b.shape[2] * 4)[:, :, :, None]
+#
+# 	x_b = torch.cat([x_b0, x_b1, x_b2], -1)
+# 	return x_b
 
 def data_aug(x_b):
 	batch_size = x_b.shape[0]
@@ -180,8 +105,21 @@ def data_aug(x_b):
 
 	return x_b
 
+def mixup(x, y, alpha=1.0):
 
-def prepare_batch(x_b, y_b, f_idx=None, mean=None, std=None, aug=False):
+	if alpha > 0:
+		lam = np.random.beta(alpha, alpha)
+	else:
+		lam = 1
+
+	batch_size = x.shape[0]
+	index = torch.randperm(batch_size).cuda()
+
+	mixed_x = lam * x + (1 - lam) * x[index, :]
+	y_a, y_b = y, y[index]
+	return mixed_x, y_a, y_b, lam
+
+def prepare_batch(x_b, y_b, f_idx=None, mean=None, std=None, aug=False, mix=False):
 	# x_b = (x_b - mean[None, None, None, :]) / std[None, None, None, :]
 	# x_b = (x_b - mean[None, :, :, :]) / std[None, :, :, :]
 	if mean is not None and std is not None:
@@ -194,15 +132,23 @@ def prepare_batch(x_b, y_b, f_idx=None, mean=None, std=None, aug=False):
 
 	x_b = preprocess_batch(x_b, mean, std)
 
+	# if mode == 'wh':
+	# 	x_b = to_wh(x_b)
+
 	if y_b is not None:
 		# y_b = torch.from_numpy(y_b).max(-1)[1].cuda()
-		y_node_b = np.concatenate([y_b[:, :3].sum(-1).reshape(-1, 1),
-								   y_b[:, 3:6].sum(-1).reshape(-1, 1),
-								   y_b[:, 6:10].sum(-1).reshape(-1, 1),
-								   y_b[:, 10:14].sum(-1).reshape(-1, 1),
-								   y_b[:, 14:17].sum(-1).reshape(-1, 1)], -1)
-		y_b = np.concatenate([y_node_b, y_b], -1)
-		y_b = torch.from_numpy(y_b).long().cuda()
+		y_b = torch.from_numpy(y_b).float().cuda()
+
+		y_node_b = torch.cat([y_b[:, :3].sum(-1).view(-1, 1),
+						   y_b[:, 3:6].sum(-1).view(-1, 1),
+						   y_b[:, 6:10].sum(-1).view(-1, 1),
+						   y_b[:, 10:14].sum(-1).view(-1, 1),
+						   y_b[:, 14:17].sum(-1).view(-1, 1)], dim = -1)
+		y_b = torch.cat([y_node_b, y_b], dim = -1)
+		if mix:
+			x_b, y_1, y_2, lam = mixup(x_b, y_b)
+			# y_b = lam * y_1 + (1 - lam) * y_2
+			return x_b, (y_1, y_2, lam)
 	return x_b[:, :, :, :], y_b
 
 

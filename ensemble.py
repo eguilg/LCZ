@@ -3,10 +3,15 @@ import numpy as np
 
 input_dir = './score'
 inputs = [
-	'pre_score_0.8975694444444444.csv',
-	'pre_score_0.9092881944444444.csv',
-	'pre_score_0.9136284722222222.csv'
+	'pre_score_0.9765625.csv',
+	'pre_score_0.9861111111111112.csv',
 ]
+
+# 84.5
+# inputs = [
+# 	'pre_score_0.9765625.csv',
+# 	'pre_score_0.9861111111111112.csv',
+# ]
 
 out = 0
 total_score = 0

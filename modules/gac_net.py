@@ -60,6 +60,15 @@ class GACNet(nn.Module):
 		# self.classifier = nn.Linear(1024, 17)
 		self.classifier = HierarchicalClassifier(1024, class_nodes)
 
+		for m in self.modules():
+			if isinstance(m, nn.Conv2d):
+				nn.init.kaiming_normal_(m.weight.data)
+			elif isinstance(m, nn.BatchNorm2d):
+				m.weight.data.fill_(1)
+				m.bias.data.zero_()
+			elif isinstance(m, nn.Linear):
+				m.bias.data.zero_()
+
 	def forward(self, x):
 
 		x = x.transpose(2, 3).transpose(1, 2)  # b channel s s

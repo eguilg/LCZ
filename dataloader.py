@@ -40,7 +40,13 @@ class H5DataSource(object):
 			self.val_indices = self.indices[:split_idx]
 			self.train_indices = self.indices[split_idx:]
 		if 'label' in self.h5fids[0].keys():
-			self.class_weights = (1 / 17) / np.concatenate([h5['label'] for h5 in self.h5fids], axis=0).mean(axis=0)
+			self.class_weights = np.concatenate([h5['label'] for h5 in self.h5fids], axis=0).mean(axis=0)
+			self.node_class_weights = np.array([self.class_weights[:3].sum(),
+												self.class_weights[3:6].sum(),
+												self.class_weights[6:10].sum(),
+												self.class_weights[10:14].sum(),
+												self.class_weights[14:17].sum()])
+			print(self.node_class_weights)
 			print(self.class_weights)
 
 class MyDataLoader(object):
@@ -54,6 +60,9 @@ class MyDataLoader(object):
 	def __iter__(self):
 		return _MyDataIter(self)
 
+	def shuffle_batch(self, seed=502):
+		np.random.seed(seed)
+		np.random.shuffle(self.indices)
 
 class _MyDataIter(object):
 	def __init__(self, data_loader):
