@@ -11,11 +11,12 @@ dense_test_file = '/home/zydq/Datasets/LCZ/dense_f_test.csv'
 if not os.path.isdir('./xgb_ckp/'):
 	os.mkdir('./xgb_ckp/')
 
-NUM_ROUNDS = 100000
+NUM_ROUNDS = 1
 SEED = 502
 
 #  resample strategy
 VAL_RESAMPLE_TIMES = 10
+
 
 def gen_resample_dict(Y):
 	label, count = np.unique(Y, return_counts=True)
@@ -33,12 +34,10 @@ if __name__ == '__main__':
 
 	val_X = val_df.iloc[:, :-1]
 	val_Y = val_df['label']
+	val_idx = list(range(val_Y.shape[0]))
 
 	# SMOTE
 	sm = SMOTE(random_state=SEED, sampling_strategy=gen_resample_dict)
-	val_res_X, val_res_Y = sm.fit_resample(val_X, val_Y)
-	val_res_X = pd.DataFrame(val_res_X, columns=val_X.columns.tolist())
-	val_res_Y = pd.Series(val_res_Y, name='label')
 
 	# trainval_df = pd.concat([train_df, val_df], axis=0)
 	# trainval_X = trainval_df.iloc[:, :-1]
@@ -50,11 +49,22 @@ if __name__ == '__main__':
 	y_total = None
 	# trainval_Y = np.eye(17)[trainval_df['label'].astype(int).values.reshape(-1)]
 
-	kf = KFold(n_splits=5, random_state=502, shuffle=True)
+	kf = KFold(n_splits=5, random_state=SEED, shuffle=True)
 	# fold_xgb = []
 	folds_stack_x = np.array([])
 	folds_stack_y = np.array([])
 	for foldid, (train_index, val_index) in enumerate(kf.split(train_df.values)):
+		print('=' * 80)
+		print('starting fold: ', foldid)
+		print('=' * 80)
+		np.random.seed(SEED)
+		np.random.shuffle(val_idx)
+		val_X = val_X.iloc[val_idx]
+		val_Y = val_Y.iloc[val_idx]
+		val_res_X, val_res_Y = sm.fit_resample(val_X, val_Y)
+
+		val_res_X = pd.DataFrame(val_res_X, columns=val_X.columns.tolist())
+		val_res_Y = pd.Series(val_res_Y, name='label')
 
 		x_train, x_val = train_X.iloc[train_index], train_X.iloc[val_index]
 		y_train, y_val = train_Y.iloc[train_index], train_Y.iloc[val_index]
@@ -63,8 +73,9 @@ if __name__ == '__main__':
 		y_train = pd.concat([y_train, val_res_Y], axis=0)
 
 		# shuffle
+		train_shuffled_idx = list(range(x_train.shape[0]))
 		np.random.seed(SEED)
-		train_shuffled_idx = np.random.shuffle(list(range(x_train.shape[0])))
+		np.random.shuffle(train_shuffled_idx)
 		x_train, y_train = x_train.iloc[train_shuffled_idx], y_train.iloc[train_shuffled_idx]
 
 		print((x_train.shape))
@@ -109,15 +120,19 @@ if __name__ == '__main__':
 		else:
 			test_pred_total = np.concatenate([test_pred_total, test_pred], axis=-1)
 
+		fold_submit = np.eye(17)[test_pred.argmax(-1).reshape(-1)]
+		np.savetxt('./submit/sub_xgb_fold' + str(foldid) + '_' + str(val_score) + '.csv', fold_submit, delimiter=',', fmt='%d')
+		np.savetxt('./score/score_xgb_fold' + str(foldid) + '_' + str(val_score) + '.csv', test_pred[:, :, 0], delimiter=',', fmt='%.5f')
+
 		bst_xgb.save_model('./xgb_ckp/xgb_fold' + str(foldid) + '.model')
-		bst_xgb.dump_model('./xgb_ckp/xgb_fold' + str(foldid) + '.xgbfi')
+		bst_xgb.dump_model('./xgb_ckp/xgb_fold' + str(foldid) + '.dump.raw', './xgb_ckp/xgb_fold' + str(foldid) + '.fmap.txt')
 		bst_xgb.__del__()
-		del d_train, d_val, x_train, x_val, y_train, y_val
+		del d_train, d_val, x_train, x_val, y_train, y_val, val_res_X, val_res_Y
 
 	total_score = (np.argmax(val_pred_total, -1) == y_total).sum() / y_total.shape[0]
 	print("total val score :", total_score)
 	test_pred_total = test_pred_total.mean(axis=-1, keepdims=False)
 
 	submit = np.eye(17)[test_pred_total.argmax(-1).reshape(-1)]
-	np.savetxt('./submit/prediction_xgb_' + str(total_score) + '.csv', submit, delimiter=',', fmt='%d')
-	np.savetxt('./score/pre_score_xgb_' + str(total_score) + '.csv', test_pred_total, delimiter=',', fmt='%.5f')
+	np.savetxt('./submit/sub_xgb_full_' + str(total_score) + '.csv', submit, delimiter=',', fmt='%d')
+	np.savetxt('./score/score_xgb_full_' + str(total_score) + '.csv', test_pred_total, delimiter=',', fmt='%.5f')

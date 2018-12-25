@@ -17,15 +17,15 @@ from modules.losses import FocalCE, SoftCE
 
 SEED = 502
 EPOCH = 150
-BATCH_SIZE = 128
-LR = 1e-4
+BATCH_SIZE = 64
+LR = 1.25e-4
 LAMBDA = 4
 USE_CLASS_WEIGHT = True
-MIX_UP = True
+MIX_UP = False
 FOCAL = False
 N_CHANNEL = 26
-# MODEL = 'GAC'
-MODEL = 'DENSE'
+MODEL = 'GAC'
+# MODEL = 'DENSE'
 # MODEL = 'RES'
 # MODEL = 'LCZ'
 
@@ -129,7 +129,7 @@ if __name__ == '__main__':
 		model = resnet18(N_CHANNEL, class_nodes)
 	elif MODEL == 'DENSE':
 		class_nodes = [3, 3, 4, 4, 3]
-		model = densenet121(N_CHANNEL, class_nodes, drop_rate=0.3)
+		model = densenet201(N_CHANNEL, class_nodes, drop_rate=0.3)
 	else:
 		model = LCZNet(channel=N_CHANNEL, n_class=17, base=64, dropout=0.3)
 

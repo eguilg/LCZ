@@ -8,14 +8,17 @@ from preprocess import prepare_batch
 from modules.lcz_net import LCZNet
 from modules.gac_net import GACNet
 from modules.lcz_res_net import resnet18, resnet34, resnet50
+from modules.lcz_dense_net import densenet121, densenet169, densenet201, densenet161
 
 import torchvision.models as models
 
 BATCH_SIZE = 32
+N_CHANNEL = 26
 test_file = '/home/zydq/Datasets/LCZ/round1_test_a_20181109.h5'
 mean_std_file = '/home/zydq/Datasets/LCZ/mean_std_f_test.h5'
 
 MODEL = 'GAC'
+# MODEL = 'DENSE'
 # MODEL = 'RES'
 # MODEL = 'LCZ'
 
@@ -30,8 +33,8 @@ MODEL = 'GAC'
 # model_dir = './checkpoints/model_56640'  #  FOCAL + MIXUP trained on train+val  0.9306 0.785/0.9556 0.779
 # model_dir = './checkpoints/model_80240'  #  FOCAL  trained on train+val  0.9712
 # model_dir = './checkpoints/model_18996'  #  FOCAL  indices trained on train+val2
-model_dir = './checkpoints/model_90302'  #  indices trained on train+val3
-model_dir = './checkpoints/model_90302'  #  indices+cosine trained on train+val3
+# model_dir = './checkpoints/model_90302'  #  indices trained on train+val3
+model_dir = './checkpoints/model_58940'  # DenseNet201 cosine trained on train+val10
 
 cur_model_path = os.path.join(model_dir, 'state_curr.ckpt')
 
@@ -60,17 +63,17 @@ if __name__ == '__main__':
 		group_sizes = [3, 3,
 					   3, 3, 2, 2,
 					   4, 3, 3]
-		# group_sizes = [3, 3, 3, 3, 3, 3, 3, 4, 4,
-		# 			   3, 3, 1, 1, 2]
 		class_nodes = [3, 3, 4, 4, 3]
 		model = GACNet(group_sizes, class_nodes, 32)
 	elif MODEL == 'RES':
 		class_nodes = [3, 3, 4, 4, 3]
 		# model = resnet34(N_CHANNEL, class_nodes)
-		model = resnet34(N_CHANNEL, class_nodes)
+		model = resnet18(N_CHANNEL, class_nodes)
+	elif MODEL == 'DENSE':
+		class_nodes = [3, 3, 4, 4, 3]
+		model = densenet201(N_CHANNEL, class_nodes, drop_rate=0.3)
 	else:
 		model = LCZNet(channel=N_CHANNEL, n_class=17, base=64, dropout=0.3)
-
 	model = model.cuda()
 
 	best_score = 0
@@ -100,7 +103,7 @@ if __name__ == '__main__':
 				total_pred = np.concatenate([total_pred, pred])
 				total_score = np.concatenate([total_score, score])
 	submit = np.eye(17)[total_pred.reshape(-1)]
-	np.savetxt('./submit/prediction_' + str(best_score) + '.csv', submit, delimiter=',', fmt='%d')
-	np.savetxt('./score/pre_score_' + str(best_score) + '.csv', total_score, delimiter=',', fmt='%.5f')
+	np.savetxt('./submit/sub_' + str(best_score) + '.csv', submit, delimiter=',', fmt='%d')
+	np.savetxt('./score/score_' + str(best_score) + '.csv', total_score, delimiter=',', fmt='%.5f')
 	print('completed!')
 	print('-' * 80)
