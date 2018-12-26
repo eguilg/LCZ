@@ -5,12 +5,12 @@ import os
 from sklearn.model_selection import KFold
 from imblearn.over_sampling import SMOTE
 
-dense_train_file = '/home/zydq/Datasets/LCZ/dense_f_train.csv'
-dense_val_file = '/home/zydq/Datasets/LCZ/dense_f_val.csv'
-dense_test_file = '/home/zydq/Datasets/LCZ/dense_f_test.csv'
+dense_train_file = '/home/zydq/Datasets/LCZ/dense_f_gabor_train.csv'
+dense_val_file = '/home/zydq/Datasets/LCZ/dense_f_gabor_val.csv'
+dense_test_file = '/home/zydq/Datasets/LCZ/dense_f_gabor_test.csv'
 
-if not os.path.isdir('./xgb_ckp/'):
-	os.mkdir('./xgb_ckp/')
+if not os.path.isdir('./xgb_gabor_ckp/'):
+	os.mkdir('./xgb_gabor_ckp/')
 
 NUM_ROUNDS = 100000
 SEED = 502
@@ -129,8 +129,8 @@ if __name__ == '__main__':
 		np.savetxt('./submit/sub_xgb_fold' + str(foldid) + '_' + str(val_score) + '.csv', fold_submit, delimiter=',', fmt='%d')
 		np.savetxt('./score/score_xgb_fold' + str(foldid) + '_' + str(val_score) + '.csv', test_pred[:, :, 0], delimiter=',', fmt='%.5f')
 
-		bst_xgb.save_model('./xgb_ckp/xgb_fold' + str(foldid) + '.model')
-		bst_xgb.dump_model('./xgb_ckp/xgb_fold' + str(foldid) + '.dump.raw')
+		bst_xgb.save_model('./xgb_gabor_ckp/xgb_fold' + str(foldid) + '.model')
+		bst_xgb.dump_model('./xgb_gabor_ckp/xgb_fold' + str(foldid) + '.dump.raw')
 		bst_xgb.__del__()
 		d_train.__del__()
 		d_val.__del__()

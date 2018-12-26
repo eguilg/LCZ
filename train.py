@@ -38,13 +38,6 @@ mean_std_file_val = '/home/zydq/Datasets/LCZ/mean_std_f_val.h5'
 
 model_dir = './checkpoints/model_' + str(round(time.time() % 100000))
 
-# model_dir = './checkpoints/model_80240'
-
-
-# model_dir = './checkpoints/model_20930'  #GACNet with class weight  8903
-# model_dir = './checkpoints/model_69737'  #GACNet with no class weight  8857
-
-# model_dir = './checkpoints/model_85726_ft'  # GACNet + class weight<1 + data_aug + phi
 if not os.path.isdir('./checkpoints/'):
 	os.mkdir('./checkpoints/')
 if not os.path.isdir(model_dir):

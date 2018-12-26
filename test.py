@@ -22,19 +22,8 @@ MODEL = 'GAC'
 # MODEL = 'RES'
 # MODEL = 'LCZ'
 
-# model_dir = './checkpoints/model_20930'  # GACNet + class weight  8903  0.770
-# model_dir = './checkpoints/model_69737'  # GACNet no class weight  8857  0.780
-# model_dir = './checkpoints/model_2234'  # LCZNet + class weight  8773 0.743
-# model_dir = './checkpoints/model_1451'  # GACNet + class weight<1 + data_aug  9025 0.768
-# model_dir = './checkpoints/model_11257'  # GACNet + class weight<1 + data_aug + phi
-# model_dir = './checkpoints/model_68909'  # GACNet + class weight<1 + data_aug + phi + trained on val  0.976 0.820
-# model_dir = './checkpoints/model_85726'  # GACNet + class weight<1 + data_aug + phi  0.90179
-# model_dir = './checkpoints/model_85726_ft'  # GACNet + class weight<1 + data_aug + phi  finetune 0.9861
-# model_dir = './checkpoints/model_56640'  #  FOCAL + MIXUP trained on train+val  0.9306 0.785/0.9556 0.779
-# model_dir = './checkpoints/model_80240'  #  FOCAL  trained on train+val  0.9712
-# model_dir = './checkpoints/model_18996'  #  FOCAL  indices trained on train+val2
-# model_dir = './checkpoints/model_90302'  #  indices trained on train+val3
-model_dir = './checkpoints/model_58940'  # DenseNet201 cosine trained on train+val10
+model_dir = './checkpoints/model_58940'  # DenseNet201 cosine trained on train+val10 0.9744 0.804
+model_dir = './checkpoints/model_28048'  # GACNet cosine trained on train+val10  0.9738
 
 cur_model_path = os.path.join(model_dir, 'state_curr.ckpt')
 

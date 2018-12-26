@@ -1,29 +1,90 @@
 import torch  # for speed
+import torch.nn.functional as F
+import cv2
 from tqdm import tqdm
 import numpy as np
 import pandas as pd
 from dataloader import H5DataSource, MyDataLoader
 from preprocess import preprocess_batch
 
-if __name__ == '__main__':
-	train_file = '/home/zydq/Datasets/LCZ/training.h5'
-	val_file = '/home/zydq/Datasets/LCZ/validation.h5'
-	test_file = '/home/zydq/Datasets/LCZ/round1_test_a_20181109.h5'
-	mean_std_file = '/home/zydq/Datasets/LCZ/mean_std_f_train.h5'
-	raw_file = [train_file, val_file, test_file]
+train_file = '/home/zydq/Datasets/LCZ/training.h5'
+val_file = '/home/zydq/Datasets/LCZ/validation.h5'
+test_file = '/home/zydq/Datasets/LCZ/round1_test_a_20181109.h5'
+mean_std_file = '/home/zydq/Datasets/LCZ/mean_std_f_train.h5'
+raw_file = [train_file, val_file, test_file]
 
-	dense_train_file = '/home/zydq/Datasets/LCZ/dense_f_train.csv'
-	dense_val_file = '/home/zydq/Datasets/LCZ/dense_f_val.csv'
-	dense_test_file = '/home/zydq/Datasets/LCZ/dense_f_test.csv'
-	dist = [dense_train_file, dense_val_file, dense_test_file]
-	column = ['mean_' + str(i) for i in range(26)] + \
-			 ['min_' + str(i) for i in range(26)] + \
-			 ['max_' + str(i) for i in range(26)] + \
-			 ['mid_' + str(i) for i in range(26)] + \
-			 ['std_' + str(i) for i in range(26)] + \
-			 ['per' + str(j) + '_' + str(i) for i in range(26) for j in [5, 20, 40, 60, 80, 95]]
+dense_train_file = '/home/zydq/Datasets/LCZ/dense_f_gabor_train.csv'
+dense_val_file = '/home/zydq/Datasets/LCZ/dense_f_gabor_val.csv'
+dense_test_file = '/home/zydq/Datasets/LCZ/dense_f_gabor_test.csv'
+dist = [dense_train_file, dense_val_file, dense_test_file]
+
+NC_IN = 26
+NC_OUT = 56
+BATCH_SIZE = 3000
+
+
+def get_dense_column(n_channel):
+	column = ['mean_' + str(i) for i in range(n_channel)] + \
+			 ['min_' + str(i) for i in range(n_channel)] + \
+			 ['max_' + str(i) for i in range(n_channel)] + \
+			 ['mid_' + str(i) for i in range(n_channel)] + \
+			 ['std_' + str(i) for i in range(n_channel)] + \
+			 ['per' + str(j) + '_' + str(i) for i in range(n_channel) for j in [5, 20, 40, 60, 80, 95]]
+	return column
+
+
+def GaborFilters(ksize=None, n_direct=6):
+	filters = []
+	if ksize is None:
+		ksize = [3, 5, 7]
+	for K in range(len(ksize)):
+		filters.append([])
+		for th_id, theta in enumerate(np.arange(0, np.pi, np.pi / n_direct)):  # gabor方向，0°，45°，90°，135°，共四个
+			kern = cv2.getGaborKernel(ksize=(ksize[K], ksize[K]),
+									  sigma=1.0,
+									  theta=theta,
+									  lambd=np.pi/2,
+									  gamma=0.5,
+									  psi=0, ktype=cv2.CV_32F)
+			# kern /= 1.5 * kern.sum()
+			filters[K].append(kern)
+			# filters[th_id].append(kern)
+	return filters
+
+
+def make_gabor_conv_weight(filters, channel, cuda=True):
+	filter_weights = []
+	for idx, ksize_filters in enumerate(filters):
+		filter_weights.append([])
+		for filter in ksize_filters:
+			weight = torch.from_numpy(filter)[None, None, :, :].expand(channel, -1, -1, -1)
+			if cuda:
+				weight = weight.cuda()
+			filter_weights[idx].append(weight)
+	return filter_weights
+
+
+def gabor_batch(weights, batch_input):
+	out = []
+	for ksize_weights in weights:
+		ksize_out = 0
+		for w in ksize_weights:
+			o = F.conv2d(batch_input, w, padding=w.shape[-1] // 2, stride=1, groups=w.shape[0])
+			ksize_out += o
+		ksize_out /= len(ksize_weights)
+		out.append(ksize_out)
+	out = torch.cat(out, dim=1)
+	return out
+
+
+if __name__ == '__main__':
+
+	column = []
+	filters = GaborFilters()
+	weights = make_gabor_conv_weight(filters, 10)
+
 	for fid in range(3):
-		init_data_source = H5DataSource([raw_file[fid]], 3000, shuffle=False, split=False)
+		init_data_source = H5DataSource([raw_file[fid]], BATCH_SIZE, shuffle=False, split=False)
 		init_loader = MyDataLoader(init_data_source.h5fids, init_data_source.indices)
 
 		feat_total = None
@@ -31,7 +92,14 @@ if __name__ == '__main__':
 		for data, label, _ in tqdm(init_loader):
 			data = torch.from_numpy(data).float().cuda()
 			data = preprocess_batch(data)
-			data = data.view(data.shape[0], 32 * 32, data.shape[-1]).transpose(2, 1)  # bs, nc, pixes
+
+			data = data.transpose(3, 2).transpose(2, 1)  # bs nc w h
+
+			# TODO: GABOR FEAT
+			gabor_data = gabor_batch(weights, data[:, 6:16, :, :])
+			data = torch.cat([data, gabor_data], dim=1)
+
+			data = data.view(data.shape[0], data.shape[1], 32 * 32)  # bs, nc, pixes
 
 			mean = data.mean(dim=-1)
 			min = data.min(dim=-1)[0]
@@ -40,7 +108,8 @@ if __name__ == '__main__':
 			std = data.std(dim=-1)
 			basic_feat = torch.cat([mean, min, max, mid, std], dim=-1).detach().cpu().numpy()
 			data = data.detach().cpu().numpy()
-			perc = np.percentile(data, [10, 20, 40, 60, 80, 90], axis=-1).transpose((1, 2, 0)).reshape(data.shape[0],-1)
+			perc = np.percentile(data, [10, 20, 40, 60, 80, 90], axis=-1).transpose((1, 2, 0)).reshape(data.shape[0],
+																									   -1)
 			batch_feat = np.concatenate([basic_feat, perc], axis=-1)
 			if feat_total is None:
 				feat_total = batch_feat
@@ -50,16 +119,13 @@ if __name__ == '__main__':
 			if label is not None:
 				label_total += label.argmax(-1).tolist()
 
-		column_names = column.copy()
+		column = get_dense_column(NC_OUT)
+
 		if len(label_total) == feat_total.shape[0]:
-			label_total = np.array(label_total).reshape(-1,1)
+			label_total = np.array(label_total).reshape(-1, 1)
 			feat_total = np.concatenate([feat_total, label_total], axis=-1)
-			column_names += ['label']
+			column += ['label']
 		print(feat_total.shape)
-		dense_df = pd.DataFrame(feat_total, columns=column_names)
-		dense_df.to_csv(dist[fid], sep=',',index=False)
-
-
-
-
-
+		dense_df = pd.DataFrame(feat_total, columns=column)
+		dense_df.to_csv(dist[fid], sep=',', index=False)
+		# dense_df.to_pickle(dist[fid])
