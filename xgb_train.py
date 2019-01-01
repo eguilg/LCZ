@@ -9,19 +9,31 @@ dense_train_file = '/home/zydq/Datasets/LCZ/dense_f_train.csv'
 dense_val_file = '/home/zydq/Datasets/LCZ/dense_f_val.csv'
 dense_test_file = '/home/zydq/Datasets/LCZ/dense_f_test.csv'
 
-if not os.path.isdir('./xgb_ckp/'):
-	os.mkdir('./xgb_ckp/')
-
 NUM_ROUNDS = 100000
 SEED = 502
+FOLD = 4
+GABOR=False
+extra  = ''
 
 #  resample strategy
 VAL_RESAMPLE_TIMES = 10
 
 
-def gen_resample_dict(Y):
+if GABOR:
+	dense_train_file = '/home/zydq/Datasets/LCZ/dense_f_gabor_train.csv'
+	dense_val_file = '/home/zydq/Datasets/LCZ/dense_f_gabor_val.csv'
+	dense_test_file = '/home/zydq/Datasets/LCZ/dense_f_gabor_test.csv'
+	extra = 'gabor'
+
+base_dir = './xgb_ckp_' + extra +str(FOLD)+ 'fold/'
+if not os.path.isdir(base_dir):
+	os.mkdir(base_dir)
+
+
+
+def gen_resample_dict(Y, times):
 	label, count = np.unique(Y, return_counts=True)
-	return dict(zip(label, VAL_RESAMPLE_TIMES * count))
+	return dict(zip(label, (times * count).astype(int)))
 
 
 if __name__ == '__main__':
@@ -42,11 +54,7 @@ if __name__ == '__main__':
 	del train_df, val_df, test_df
 
 	# SMOTE
-	sm = SMOTE(random_state=SEED, sampling_strategy=gen_resample_dict)
-
-	# trainval_df = pd.concat([train_df, val_df], axis=0)
-	# trainval_X = trainval_df.iloc[:, :-1]
-	# trainval_Y = trainval_df['label']
+	sm = SMOTE(random_state=SEED, sampling_strategy=lambda y: gen_resample_dict(y, VAL_RESAMPLE_TIMES))
 
 	d_test = xgb.DMatrix(test_X, feature_names=feat_names)
 	test_pred_total = None
@@ -54,7 +62,7 @@ if __name__ == '__main__':
 	y_total = None
 	# trainval_Y = np.eye(17)[trainval_df['label'].astype(int).values.reshape(-1)]
 
-	kf = KFold(n_splits=5, random_state=SEED, shuffle=True)
+	kf = KFold(n_splits=FOLD, random_state=SEED, shuffle=True)
 	# fold_xgb = []
 	folds_stack_x = np.array([])
 	folds_stack_y = np.array([])
@@ -68,11 +76,13 @@ if __name__ == '__main__':
 		val_Y = val_Y[val_idx]
 		val_res_X, val_res_Y = sm.fit_resample(val_X, val_Y)
 
-		# val_res_X = pd.DataFrame(val_res_X, columns=val_X.columns.tolist())
-		# val_res_Y = pd.Series(val_res_Y, name='label')
+		# train on big one
+		# x_train, x_val = train_X[train_index], train_X[val_index]
+		# y_train, y_val = train_Y[train_index], train_Y[val_index]
 
-		x_train, x_val = train_X[train_index], train_X[val_index]
-		y_train, y_val = train_Y[train_index], train_Y[val_index]
+		# train on small one
+		x_val, x_train = train_X[train_index], train_X[val_index]
+		y_val, y_train = train_Y[train_index], train_Y[val_index]
 
 		x_train = np.concatenate([x_train, val_res_X], axis=0)
 		y_train = np.concatenate([y_train, val_res_Y], axis=0)
@@ -126,11 +136,11 @@ if __name__ == '__main__':
 			test_pred_total = np.concatenate([test_pred_total, test_pred], axis=-1)
 
 		fold_submit = np.eye(17)[test_pred.argmax(1).reshape(-1)]
-		np.savetxt('./submit/sub_xgb_fold' + str(foldid) + '_' + str(val_score) + '.csv', fold_submit, delimiter=',', fmt='%d')
-		np.savetxt('./score/score_xgb_fold' + str(foldid) + '_' + str(val_score) + '.csv', test_pred[:, :, 0], delimiter=',', fmt='%.5f')
+		np.savetxt('./submit/sub_xgb_'+ extra +str(FOLD)+ 'fold' + str(foldid) + '_' + str(val_score) + '.csv', fold_submit, delimiter=',', fmt='%d')
+		np.savetxt('./score/score_xgb_'+ extra +str(FOLD)+ 'fold' + str(foldid) + '_' + str(val_score) + '.csv', test_pred[:, :, 0], delimiter=',', fmt='%.5f')
 
-		bst_xgb.save_model('./xgb_ckp/xgb_fold' + str(foldid) + '.model')
-		bst_xgb.dump_model('./xgb_ckp/xgb_fold' + str(foldid) + '.dump.raw')
+		bst_xgb.save_model(os.path.join(base_dir, 'xgb_'+ extra +str(FOLD)+ 'fold' + str(foldid) + '.model'))
+		bst_xgb.dump_model(os.path.join(base_dir, 'xgb_'+ extra +str(FOLD)+ 'fold' + str(foldid) + '.dump.raw'))
 		bst_xgb.__del__()
 		d_train.__del__()
 		d_val.__del__()
@@ -141,5 +151,5 @@ if __name__ == '__main__':
 	test_pred_total = test_pred_total.mean(axis=-1, keepdims=False)
 
 	submit = np.eye(17)[test_pred_total.argmax(-1).reshape(-1)]
-	np.savetxt('./submit/sub_xgb_full_' + str(total_score) + '.csv', submit, delimiter=',', fmt='%d')
-	np.savetxt('./score/score_xgb_full_' + str(total_score) + '.csv', test_pred_total, delimiter=',', fmt='%.5f')
+	np.savetxt('./submit/sub_xgb_' + extra + str(FOLD)+ 'full_' + str(total_score) + '.csv', submit, delimiter=',', fmt='%d')
+	np.savetxt('./score/score_xgb_' + extra + str(FOLD)+ 'full_' + str(total_score) + '.csv', test_pred_total, delimiter=',', fmt='%.5f')

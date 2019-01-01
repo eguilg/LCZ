@@ -8,8 +8,8 @@ from sklearn.model_selection import KFold
 # dense_val_file = '/home/zydq/Datasets/LCZ/dense_f_val.csv'
 dense_test_file = '/home/zydq/Datasets/LCZ/dense_f_test.csv'
 model_paths = [
-	'./xgb_ckp/xgb_fold0.model',
-	# './xgb_ckp/xgb_fold1.model',
+	'./xgb_ckp_5fold/xgb_fold0.model',
+	# './xgb_ckp_5fold/xgb_fold1.model',
 
 ]
 

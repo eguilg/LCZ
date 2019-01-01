@@ -23,7 +23,9 @@ MODEL = 'GAC'
 # MODEL = 'LCZ'
 
 model_dir = './checkpoints/model_58940'  # DenseNet201 cosine trained on train+val10 0.9744 0.804
-model_dir = './checkpoints/model_28048'  # GACNet cosine trained on train+val10  0.9738
+model_dir = './checkpoints/model_28048'  # GACNet cosine trained on train+val10  0.9738  0.807
+
+model_dir = './checkpoints/model_1416'  # GACNet cosine GP trained on train+val10  0.9738  0.807
 
 cur_model_path = os.path.join(model_dir, 'state_curr.ckpt')
 
@@ -52,15 +54,11 @@ if __name__ == '__main__':
 		group_sizes = [3, 3,
 					   3, 3, 2, 2,
 					   4, 3, 3]
-		class_nodes = [3, 3, 4, 4, 3]
-		model = GACNet(group_sizes, class_nodes, 32)
+		model = GACNet(group_sizes, 17, 32)
 	elif MODEL == 'RES':
-		class_nodes = [3, 3, 4, 4, 3]
-		# model = resnet34(N_CHANNEL, class_nodes)
-		model = resnet18(N_CHANNEL, class_nodes)
+		model = resnet18(N_CHANNEL, 17)
 	elif MODEL == 'DENSE':
-		class_nodes = [3, 3, 4, 4, 3]
-		model = densenet201(N_CHANNEL, class_nodes, drop_rate=0.3)
+		model = densenet201(N_CHANNEL, 17, drop_rate=0.3)
 	else:
 		model = LCZNet(channel=N_CHANNEL, n_class=17, base=64, dropout=0.3)
 	model = model.cuda()
@@ -82,7 +80,7 @@ if __name__ == '__main__':
 		model.eval()
 		for test_data, _, fidx in tqdm(test_loader):
 			test_input, _ = prepare_batch(test_data, None, fidx, mean, std)
-			test_node_out, test_out = model(test_input)
+			test_out = model(test_input)
 			pred = test_out.max(-1)[1].detach().cpu().numpy()
 			score = test_out.detach().cpu().numpy()
 			if total_pred is None:

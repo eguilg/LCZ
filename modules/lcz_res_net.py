@@ -88,21 +88,22 @@ class CbamBottleneck(nn.Module):
 
 class LCZResNet(nn.Module):
 
-	def __init__(self, block, in_planes, layers, class_nodes=None, num_classes=17):
+	def __init__(self, block, in_planes, layers, num_classes=17):
 		self.inplanes = 64
 		super(LCZResNet, self).__init__()
 		self.conv1 = nn.Conv2d(in_planes, 64, kernel_size=3, stride=1, padding=1,
 							   bias=False)  # 32 * 32
 		self.bn1 = nn.BatchNorm2d(64)
 		self.relu = nn.ReLU(inplace=True)
-		self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)  # 16 * 16
-		self.layer1 = self._make_layer(block, 64, layers[0])
-		self.layer2 = self._make_layer(block, 128, layers[1], stride=2)  # 8 * 8
-		self.layer3 = self._make_layer(block, 256, layers[2], stride=2)  # 4 * 4
-		self.layer4 = self._make_layer(block, 512, layers[3], stride=2)  # 2 * 2
-		self.avgpool = nn.AvgPool2d(2, stride=1)
+		# self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)  # 16 * 16
+		self.layer1 = self._make_layer(block, 64, layers[0])   				# 32 * 32
+		self.layer2 = self._make_layer(block, 128, layers[1], stride=2)  # 16 * 16
+		self.layer3 = self._make_layer(block, 256, layers[2], stride=2)  # 8 * 8
+		self.layer4 = self._make_layer(block, 512, layers[3], stride=2)  # 4 * 4
+		# self.avgpool = nn.AvgPool2d(2, stride=1)
 		# self.fc = nn.Linear(512 * block.expansion, num_classes)
-		self.fc = HierarchicalClassifier(512 * block.expansion, class_nodes)
+
+		self.fc = nn.Conv2d(512, num_classes, 4)
 
 		for m in self.modules():
 			if isinstance(m, nn.Conv2d):
@@ -143,74 +144,72 @@ class LCZResNet(nn.Module):
 		x = self.layer3(x)
 		x = self.layer4(x)
 
-		x = self.avgpool(x)
-		x = x.view(x.size(0), -1)
-		x_nodes, x = self.fc(x)
+		x = F.softmax(self.fc(x).view(x.size(0), -1), -1)
 
-		return x_nodes, x
+		return x
 
 
-def resnet10(in_planes=20, class_nodes=None, **kwargs):
+def resnet10(in_planes=20, num_classes=17, **kwargs):
 	"""Constructs a ResNet-10 model.
 
 	Args:
 		pretrained (bool): If True, returns a model pre-trained on ImageNet
 	"""
-	model = LCZResNet(CbamBlock, in_planes, [1, 1, 1, 1], class_nodes, **kwargs)
+	model = LCZResNet(CbamBlock, in_planes, [1, 1, 1, 1], num_classes, **kwargs)
 
 	return model
 
 
-def resnet18(in_planes=20, class_nodes=None, **kwargs):
+def resnet18(in_planes=20,  num_classes=17, **kwargs):
 	"""Constructs a ResNet-18 model.
 
 	Args:
 		pretrained (bool): If True, returns a model pre-trained on ImageNet
 	"""
-	model = LCZResNet(CbamBlock, in_planes, [2, 2, 2, 2], class_nodes, **kwargs)
+	model = LCZResNet(CbamBlock, in_planes, [2, 2, 2, 2], num_classes, **kwargs)
 
 	return model
 
 
-def resnet34(in_planes=20, class_nodes=None, **kwargs):
+def resnet34(in_planes=20, num_classes=17, **kwargs):
 	"""Constructs a ResNet-34 model.
 
 	Args:
 		pretrained (bool): If True, returns a model pre-trained on ImageNet
 	"""
-	model = LCZResNet(CbamBlock, in_planes, [3, 4, 6, 3], class_nodes, **kwargs)
+	model = LCZResNet(CbamBlock, in_planes, [3, 4, 6, 3], num_classes, **kwargs)
 
 	return model
 
 
-def resnet50(in_planes=20, class_nodes=None, **kwargs):
+def resnet50(in_planes=20, num_classes=17, **kwargs):
 	"""Constructs a ResNet-50 model.
 
 	Args:
 		pretrained (bool): If True, returns a model pre-trained on ImageNet
 	"""
-	model = LCZResNet(CbamBottleneck, in_planes, [3, 4, 6, 3], class_nodes, **kwargs)
+	model = LCZResNet(CbamBottleneck, in_planes, [3, 4, 6, 3], num_classes, **kwargs)
 
 	return model
 
 
-def resnet101(in_planes=20, class_nodes=None, **kwargs):
+def resnet101(in_planes=20, num_classes=17, **kwargs):
 	"""Constructs a ResNet-101 model.
 
 	Args:
 		pretrained (bool): If True, returns a model pre-trained on ImageNet
 	"""
-	model = LCZResNet(CbamBottleneck, in_planes, [3, 4, 23, 3], class_nodes, **kwargs)
+	model = LCZResNet(CbamBottleneck, in_planes, [3, 4, 23, 3], num_classes, **kwargs)
 
 	return model
 
 
-def resnet152(in_planes=20, class_nodes=None, **kwargs):
+def resnet152(in_planes=20, num_classes=17, **kwargs):
 	"""Constructs a ResNet-152 model.
 
 	Args:
 		pretrained (bool): If True, returns a model pre-trained on ImageNet
 	"""
-	model = LCZResNet(CbamBottleneck, in_planes, [3, 8, 36, 3], class_nodes, **kwargs)
+	model = LCZResNet(CbamBottleneck, in_planes, [3, 8, 36, 3], num_classes, **kwargs)
 
 	return model

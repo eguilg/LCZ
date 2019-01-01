@@ -8,7 +8,7 @@ from collections import OrderedDict
 from torchvision.models.densenet import _DenseBlock,  _Transition
 
 
-def densenet121(in_channel=20, class_nodes=None, drop_rate=0, **kwargs):
+def densenet121(in_channel=20, num_classes=17, drop_rate=0, **kwargs):
 	r"""Densenet-121 model from
 	`"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`_
 
@@ -16,13 +16,13 @@ def densenet121(in_channel=20, class_nodes=None, drop_rate=0, **kwargs):
 		pretrained (bool): If True, returns a model pre-trained on ImageNet
 	"""
 	model = LCZDenseNet(in_channel=in_channel, num_init_features=64, growth_rate=32, block_config=(6, 12, 24, 16),
-						drop_rate=drop_rate, class_nodes=class_nodes,
+						drop_rate=drop_rate, n_class=num_classes,
 						**kwargs)
 
 	return model
 
 
-def densenet169(in_channel=20, class_nodes=None, drop_rate=0, **kwargs):
+def densenet169(in_channel=20, num_classes=17, drop_rate=0, **kwargs):
 	r"""Densenet-169 model from
 	`"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`_
 
@@ -30,13 +30,13 @@ def densenet169(in_channel=20, class_nodes=None, drop_rate=0, **kwargs):
 		pretrained (bool): If True, returns a model pre-trained on ImageNet
 	"""
 	model = LCZDenseNet(in_channel=in_channel, num_init_features=64, growth_rate=32, block_config=(6, 12, 32, 32),
-						drop_rate=drop_rate, class_nodes=class_nodes,
+						drop_rate=drop_rate, n_class=num_classes,
 						**kwargs)
 
 	return model
 
 
-def densenet201(in_channel=20, class_nodes=None, drop_rate=0, **kwargs):
+def densenet201(in_channel=20, num_classes=17, drop_rate=0, **kwargs):
 	r"""Densenet-201 model from
 	`"Densely Connected Convolutional Networks" <https://arxiv.org/pdf/1608.06993.pdf>`_
 
@@ -44,15 +44,15 @@ def densenet201(in_channel=20, class_nodes=None, drop_rate=0, **kwargs):
 		pretrained (bool): If True, returns a model pre-trained on ImageNet
 	"""
 	model = LCZDenseNet(in_channel=in_channel, num_init_features=64, growth_rate=32, block_config=(6, 12, 48, 32),
-						drop_rate=drop_rate, class_nodes=class_nodes,
+						drop_rate=drop_rate, n_class=num_classes,
 						**kwargs)
 
 	return model
 
 
-def densenet161(in_channel=20, class_nodes=None, drop_rate=0, **kwargs):
+def densenet161(in_channel=20, num_classes=17, drop_rate=0, **kwargs):
 	model = LCZDenseNet(in_channel=in_channel, num_init_features=96, growth_rate=48, block_config=(6, 12, 36, 24),
-						drop_rate=drop_rate, class_nodes=class_nodes,
+						drop_rate=drop_rate, n_class=num_classes,
 						**kwargs)
 
 	return model
@@ -60,8 +60,8 @@ def densenet161(in_channel=20, class_nodes=None, drop_rate=0, **kwargs):
 
 class LCZDenseNet(nn.Module):
 
-	def __init__(self, in_channel=3, growth_rate=32, block_config=(6, 12, 24, 16),
-				 num_init_features=64, bn_size=4, drop_rate=0, class_nodes=None):
+	def __init__(self, in_channel=3, n_class=17, growth_rate=32, block_config=(6, 12, 24, 16),
+				 num_init_features=64, bn_size=4, drop_rate=0):
 
 		super(LCZDenseNet, self).__init__()
 
@@ -94,7 +94,11 @@ class LCZDenseNet(nn.Module):
 
 		# Linear layer
 		# self.classifier = nn.Linear(num_features, num_classes)
-		self.fc = HierarchicalClassifier(num_features, class_nodes)
+		#self.fc = nn.Conv2d(num_features, n_class, 4)
+		self.fc = nn.Sequential(nn.Conv2d(num_features, n_class, 1),
+								nn.AvgPool2d(4)
+								)
+
 		# Official init from torch repo.
 		for m in self.modules():
 			if isinstance(m, nn.Conv2d):
@@ -109,6 +113,6 @@ class LCZDenseNet(nn.Module):
 		x = x.transpose(2, 3).transpose(1, 2)  # b channel s s
 		features = self.features(x)
 		out = F.relu(features, inplace=True)
-		out = F.avg_pool2d(out, kernel_size=4, stride=1).view(features.size(0), -1)
-		out_nodes, out = self.fc(out)
-		return out_nodes, out
+		# out = F.avg_pool2d(out, kernel_size=4, stride=1).view(features.size(0), -1)
+		out = F.softmax(self.fc(out).view(out.size(0), -1), -1)
+		return out

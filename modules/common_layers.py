@@ -36,3 +36,26 @@ class HierarchicalClassifier(nn.Module):
 			leaf_preds.append(F.softmax(lf_clsfr(input), -1) * node_pred[:, i][:, None])
 		leaf_preds = torch.cat(leaf_preds, -1)
 		return node_pred, leaf_preds
+
+
+class HierarchicalGPClassifier(nn.Module):
+	"""
+	级联连分类器
+	"""
+
+	def __init__(self, feature_dim, fmap_size, leaf_nums):
+		super(HierarchicalGPClassifier, self).__init__()
+
+		self.node_classifier = nn.Conv2d(in_channels=feature_dim,out_channels=len(leaf_nums), kernel_size=fmap_size)
+		self.leaf_classifiers = nn.ModuleList()
+		for lf_n in leaf_nums:
+			self.leaf_classifiers.append(nn.Conv2d(feature_dim, lf_n, fmap_size))
+
+	def forward(self, input):
+		bs = input.size(0)
+		node_pred = F.softmax(self.node_classifier(input).view(bs, -1), -1)
+		leaf_preds = []
+		for i, lf_clsfr in enumerate(self.leaf_classifiers):
+			leaf_preds.append(F.softmax(lf_clsfr(input).view(bs, -1), -1) * node_pred[:, i][:, None])
+		leaf_preds = torch.cat(leaf_preds, -1)
+		return node_pred, leaf_preds

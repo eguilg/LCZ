@@ -139,12 +139,6 @@ def prepare_batch(x_b, y_b, f_idx=None, mean=None, std=None, aug=False, mix=Fals
 		# y_b = torch.from_numpy(y_b).max(-1)[1].cuda()
 		y_b = torch.from_numpy(y_b).float().cuda()
 
-		y_node_b = torch.cat([y_b[:, :3].sum(-1).view(-1, 1),
-						   y_b[:, 3:6].sum(-1).view(-1, 1),
-						   y_b[:, 6:10].sum(-1).view(-1, 1),
-						   y_b[:, 10:14].sum(-1).view(-1, 1),
-						   y_b[:, 14:17].sum(-1).view(-1, 1)], dim = -1)
-		y_b = torch.cat([y_node_b, y_b], dim = -1)
 		if mix:
 			x_b, y_1, y_2, lam = mixup(x_b, y_b)
 			# y_b = lam * y_1 + (1 - lam) * y_2

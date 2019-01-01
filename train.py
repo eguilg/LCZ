@@ -25,7 +25,7 @@ MIX_UP = False
 FOCAL = False
 N_CHANNEL = 26
 MODEL = 'GAC'
-# MODEL = 'DENSE'
+#MODEL = 'DENSE'
 # MODEL = 'RES'
 # MODEL = 'LCZ'
 
@@ -114,15 +114,11 @@ if __name__ == '__main__':
 		group_sizes = [3, 3,
 					   3, 3, 2, 2,
 					   4, 3, 3]
-		class_nodes = [3, 3, 4, 4, 3]
-		model = GACNet(group_sizes, class_nodes, 32)
+		model = GACNet(group_sizes, 17, 32)
 	elif MODEL == 'RES':
-		class_nodes = [3, 3, 4, 4, 3]
-		# model = resnet34(N_CHANNEL, class_nodes)
-		model = resnet18(N_CHANNEL, class_nodes)
+		model = resnet18(N_CHANNEL, 17)
 	elif MODEL == 'DENSE':
-		class_nodes = [3, 3, 4, 4, 3]
-		model = densenet201(N_CHANNEL, class_nodes, drop_rate=0.3)
+		model = densenet201(N_CHANNEL, 17, drop_rate=0.3)
 	else:
 		model = LCZNet(channel=N_CHANNEL, n_class=17, base=64, dropout=0.3)
 
@@ -139,12 +135,10 @@ if __name__ == '__main__':
 		crit = nn.NLLLoss
 
 	if USE_CLASS_WEIGHT:
-		criteria1 = crit(weight=class_weights).cuda()
-		criteria2 = crit(weight=node_class_weights).cuda()
+		criteria = crit(weight=class_weights).cuda()
 	else:
-		criteria1 = crit().cuda()
-		criteria2 = crit().cuda()
-	optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=1e-5)
+		criteria = crit().cuda()
+	optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=3e-2)
 	lr_scheduler = CosineAnnealingLR(optimizer, T_max=len(train_loader), eta_min=1e-7)
 
 	if os.path.isfile(cur_model_path):
@@ -184,25 +178,23 @@ if __name__ == '__main__':
 				model.train()
 				optimizer.zero_grad()
 
-				train_node_out, train_out = model(train_input)
+				train_out = model(train_input)
 				if MIX_UP:
 					y_1, y_2, lam = train_target
-					loss = mixup_criterion(criteria1, train_out, y_1[:, 5:], y_2[:, 5:], lam)
-					loss_node = mixup_criterion(criteria2, train_node_out, y_1[:, :5], y_2[:, :5], lam)
+					loss = mixup_criterion(criteria, train_out, y_1, y_2, lam)
+					# loss_node = mixup_criterion(criteria2, train_node_out, y_1[:, :5], y_2[:, :5], lam)
 					train_target = lam * y_1 + (1 - lam) * y_2
 				elif FOCAL:
-					loss = criteria1(train_out, train_target[:, 5:])
-					loss_node = criteria2(train_node_out, train_target[:, :5])
+					loss = criteria(train_out, train_target)
+
 				else:
-					loss = criteria1(torch.log(train_out), train_target[:, 5:].max(-1)[1])
-					loss_node = criteria2(torch.log(train_node_out), train_target[:, :5].max(-1)[1])
+					loss = criteria(torch.log(train_out), train_target.max(-1)[1])
 
-				train_hit += (train_out.max(-1)[1] == train_target[:, 5:].max(-1)[1]).sum().item()
+				train_hit += (train_out.max(-1)[1] == train_target.max(-1)[1]).sum().item()
 
 
-				# loss.backward()
-				loss_total = loss + loss_node
-				loss_total.backward()
+				loss.backward()
+
 				torch.nn.utils.clip_grad_norm_(model.parameters(), 5)
 
 				lr_scheduler.step()
@@ -243,13 +235,12 @@ if __name__ == '__main__':
 						model.eval()
 						for val_data, val_label, f_idx_val in val_loader:
 							val_input, val_target = prepare_batch(val_data, val_label, f_idx_val, mean, std)
-							# val_out = model(val_input)
-							val_node_out, val_out = model(val_input)
+							val_out = model(val_input)
 							if FOCAL or MIX_UP:
-								val_loss_total += criteria1(val_out, val_target[:, 5:]).item()
+								val_loss_total += criteria(val_out, val_target).item()
 							else:
-								val_loss_total += criteria1(torch.log(val_out), val_target[:, 5:].max(-1)[1]).item()
-							val_hit += (val_out.max(-1)[1] == val_target[:, 5:].max(-1)[1]).sum().item()
+								val_loss_total += criteria(torch.log(val_out), val_target.max(-1)[1]).item()
+							val_hit += (val_out.max(-1)[1] == val_target.max(-1)[1]).sum().item()
 							val_sample += val_target.size()[0]
 							val_step += 1
 

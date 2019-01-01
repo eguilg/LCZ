@@ -29,10 +29,10 @@ def AlignConv(in_c, out_c, kernel, stride, padding, dropout=0.0, bn=True):
 
 class GACNet(nn.Module):
 
-	def __init__(self, group_sizes, class_nodes, base_size, dropout=0.3, bn=True):
+	def __init__(self, group_sizes, n_class, base_size, dropout=0.3, bn=True):
 		super(GACNet, self).__init__()
 		self.group_sizes = group_sizes
-		self.class_nodes = class_nodes
+		self.n_class = n_class
 		self.base_size = base_size
 
 		self.groups = nn.ModuleList()
@@ -43,7 +43,8 @@ class GACNet(nn.Module):
 				CBAM_Conv(group_size, n_fileter,
 						  kernel=3, stride=1, padding=1,
 						  reduction=2, dropout=0.5,
-						  pool=nn.MaxPool2d(2, 2), bn=bn))  # 16 * 16
+						  pool=nn.MaxPool2d(2, 2),
+						  bn=bn))  # 16 * 16
 			group_feature_dim += n_fileter
 
 		self.bottelneck = nn.Sequential(
@@ -55,10 +56,13 @@ class GACNet(nn.Module):
 					  kernel=3, stride=1, padding=1,
 					  reduction=8, dropout=0.3,
 					  pool=nn.MaxPool2d(2, 2), bn=bn),  # 4 * 4
+
+
 		)
 
-		# self.classifier = nn.Linear(1024, 17)
-		self.classifier = HierarchicalClassifier(1024, class_nodes)
+		self.fc = nn.Sequential(nn.Conv2d(1024, n_class, 1),
+								nn.AvgPool2d(4)
+								)
 
 		for m in self.modules():
 			if isinstance(m, nn.Conv2d):
@@ -83,12 +87,7 @@ class GACNet(nn.Module):
 
 		out = self.bottelneck(out)  # b, 16*base, s/4, s/4
 
-		out = F.max_pool2d(out, 4, stride=1)
+		out = F.softmax(self.fc(out).view(out.size(0), -1), -1)
 
-		out = out.view(out.size(0), -1)
-
-		# out = F.softmax(self.classifier(out), dim=-1)
-		# return out
-		node_out, out = self.classifier(out)
-		return node_out, out
+		return out
 

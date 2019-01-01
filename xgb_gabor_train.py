@@ -19,9 +19,9 @@ SEED = 502
 VAL_RESAMPLE_TIMES = 10
 
 
-def gen_resample_dict(Y):
+def gen_resample_dict(Y, times):
 	label, count = np.unique(Y, return_counts=True)
-	return dict(zip(label, VAL_RESAMPLE_TIMES * count))
+	return dict(zip(label, (times * count).astype(int)))
 
 
 if __name__ == '__main__':
@@ -42,7 +42,7 @@ if __name__ == '__main__':
 	del train_df, val_df, test_df
 
 	# SMOTE
-	sm = SMOTE(random_state=SEED, sampling_strategy=gen_resample_dict)
+	sm = SMOTE(random_state=SEED, sampling_strategy=lambda y: gen_resample_dict(y, VAL_RESAMPLE_TIMES))
 
 	# trainval_df = pd.concat([train_df, val_df], axis=0)
 	# trainval_X = trainval_df.iloc[:, :-1]
