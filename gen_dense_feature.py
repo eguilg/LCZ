@@ -7,17 +7,6 @@ import pandas as pd
 from dataloader import H5DataSource, MyDataLoader
 from preprocess import preprocess_batch
 
-train_file = '/home/zydq/Datasets/LCZ/training.h5'
-val_file = '/home/zydq/Datasets/LCZ/validation.h5'
-test_file = '/home/zydq/Datasets/LCZ/round1_test_a_20181109.h5'
-mean_std_file = '/home/zydq/Datasets/LCZ/mean_std_f_train.h5'
-raw_file = [train_file, val_file, test_file]
-
-dense_train_file = '/home/zydq/Datasets/LCZ/dense_f_gabor_train.csv'
-dense_val_file = '/home/zydq/Datasets/LCZ/dense_f_gabor_val.csv'
-dense_test_file = '/home/zydq/Datasets/LCZ/dense_f_gabor_test.csv'
-dist = [dense_train_file, dense_val_file, dense_test_file]
-
 NC_IN = 26
 NC_OUT = 56
 BATCH_SIZE = 3000
@@ -29,7 +18,7 @@ def get_dense_column(n_channel):
 			 ['max_' + str(i) for i in range(n_channel)] + \
 			 ['mid_' + str(i) for i in range(n_channel)] + \
 			 ['std_' + str(i) for i in range(n_channel)] + \
-			 ['per' + str(j) + '_' + str(i) for i in range(n_channel) for j in [5, 20, 40, 60, 80, 95]]
+			 ['per' + str(j) + '_' + str(i) for i in range(n_channel) for j in [10, 20, 40, 60, 80, 90]]
 	return column
 
 
@@ -43,12 +32,12 @@ def GaborFilters(ksize=None, n_direct=6):
 			kern = cv2.getGaborKernel(ksize=(ksize[K], ksize[K]),
 									  sigma=1.0,
 									  theta=theta,
-									  lambd=np.pi/2,
+									  lambd=np.pi / 2,
 									  gamma=0.5,
 									  psi=0, ktype=cv2.CV_32F)
 			# kern /= 1.5 * kern.sum()
 			filters[K].append(kern)
-			# filters[th_id].append(kern)
+		# filters[th_id].append(kern)
 	return filters
 
 
@@ -77,55 +66,69 @@ def gabor_batch(weights, batch_input):
 	return out
 
 
-if __name__ == '__main__':
+def gen_dense_feat(input_file, out_file, gabor=False):
+	if gabor:
+		filters = GaborFilters()
+		weights = make_gabor_conv_weight(filters, 10)
 
-	column = []
-	filters = GaborFilters()
-	weights = make_gabor_conv_weight(filters, 10)
+	init_data_source = H5DataSource([input_file], BATCH_SIZE, shuffle=False, split=False)
+	init_loader = MyDataLoader(init_data_source.h5fids, init_data_source.indices)
 
-	for fid in range(3):
-		init_data_source = H5DataSource([raw_file[fid]], BATCH_SIZE, shuffle=False, split=False)
-		init_loader = MyDataLoader(init_data_source.h5fids, init_data_source.indices)
+	feat_total = None
+	label_total = []
+	for data, label, _ in tqdm(init_loader):
+		data = torch.from_numpy(data).float().cuda()
+		data = preprocess_batch(data)
 
-		feat_total = None
-		label_total = []
-		for data, label, _ in tqdm(init_loader):
-			data = torch.from_numpy(data).float().cuda()
-			data = preprocess_batch(data)
+		data = data.transpose(3, 2).transpose(2, 1)  # bs nc w h
 
-			data = data.transpose(3, 2).transpose(2, 1)  # bs nc w h
-
+		if gabor:
 			# TODO: GABOR FEAT
 			gabor_data = gabor_batch(weights, data[:, 6:16, :, :])
 			data = torch.cat([data, gabor_data], dim=1)
 
-			data = data.view(data.shape[0], data.shape[1], 32 * 32)  # bs, nc, pixes
+		data = data.view(data.shape[0], data.shape[1], 32 * 32)  # bs, nc, pixes
 
-			mean = data.mean(dim=-1)
-			min = data.min(dim=-1)[0]
-			max = data.max(dim=-1)[0]
-			mid = data.median(dim=-1)[0]
-			std = data.std(dim=-1)
-			basic_feat = torch.cat([mean, min, max, mid, std], dim=-1).detach().cpu().numpy()
-			data = data.detach().cpu().numpy()
-			perc = np.percentile(data, [10, 20, 40, 60, 80, 90], axis=-1).transpose((1, 2, 0)).reshape(data.shape[0],
-																									   -1)
-			batch_feat = np.concatenate([basic_feat, perc], axis=-1)
-			if feat_total is None:
-				feat_total = batch_feat
-			else:
-				feat_total = np.concatenate([feat_total, batch_feat], axis=0)
+		mean = data.mean(dim=-1)
+		min = data.min(dim=-1)[0]
+		max = data.max(dim=-1)[0]
+		mid = data.median(dim=-1)[0]
+		std = data.std(dim=-1)
+		basic_feat = torch.cat([mean, min, max, mid, std], dim=-1).detach().cpu().numpy()
+		data = data.detach().cpu().numpy()
+		perc = np.percentile(data, [10, 20, 40, 60, 80, 90], axis=-1).transpose((1, 2, 0)).reshape(data.shape[0],
+																								   -1)
+		batch_feat = np.concatenate([basic_feat, perc], axis=-1)
+		if feat_total is None:
+			feat_total = batch_feat
+		else:
+			feat_total = np.concatenate([feat_total, batch_feat], axis=0)
 
-			if label is not None:
-				label_total += label.argmax(-1).tolist()
+		if label is not None:
+			label_total += label.argmax(-1).tolist()
 
-		column = get_dense_column(NC_OUT)
+	column = get_dense_column(NC_OUT)
 
-		if len(label_total) == feat_total.shape[0]:
-			label_total = np.array(label_total).reshape(-1, 1)
-			feat_total = np.concatenate([feat_total, label_total], axis=-1)
-			column += ['label']
-		print(feat_total.shape)
-		dense_df = pd.DataFrame(feat_total, columns=column)
-		dense_df.to_csv(dist[fid], sep=',', index=False)
-		# dense_df.to_pickle(dist[fid])
+	if len(label_total) == feat_total.shape[0]:
+		label_total = np.array(label_total).reshape(-1, 1)
+		feat_total = np.concatenate([feat_total, label_total], axis=-1)
+		column += ['label']
+	print(feat_total.shape)
+	dense_df = pd.DataFrame(feat_total, columns=column)
+	dense_df.to_csv(out_file, sep=',', index=False)
+
+
+if __name__ == '__main__':
+	train_file = '/home/zydq/Datasets/LCZ/training.h5'
+	val_file = '/home/zydq/Datasets/LCZ/validation.h5'
+	testA_file = '/home/zydq/Datasets/LCZ/round1_test_a_20181109.h5'
+
+	testB_file = '/home/zydq/Datasets/LCZ/round1_test_a_20181109.h5'
+
+	dense_train_file = '/home/zydq/Datasets/LCZ/dense_f_train.csv'
+	dense_val_file = '/home/zydq/Datasets/LCZ/dense_f_val.csv'
+	dense_testA_file = '/home/zydq/Datasets/LCZ/dense_f_test.csv'
+
+	dense_testB_file = '/home/zydq/Datasets/LCZ/dense_f_testB.csv'
+
+	gen_dense_feat(testB_file, dense_testB_file)

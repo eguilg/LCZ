@@ -137,7 +137,7 @@ def prepare_batch(x_b, y_b, f_idx=None, mean=None, std=None, aug=False, mix=Fals
 
 	if y_b is not None:
 		# y_b = torch.from_numpy(y_b).max(-1)[1].cuda()
-		y_b = torch.from_numpy(y_b).float().cuda()
+		y_b = torch.from_numpy(y_b).cuda()
 
 		if mix:
 			x_b, y_1, y_2, lam = mixup(x_b, y_b)

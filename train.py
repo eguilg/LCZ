@@ -6,26 +6,24 @@ import torch
 import torch.nn as nn
 from torch.optim.lr_scheduler import CosineAnnealingLR
 import numpy as np
-from dataloader import MyDataLoader, H5DataSource
+from dataloader import MyDataLoader, H5DataSource, SampledDataSorce
 from preprocess import prepare_batch
-from modules.lcz_net import LCZNet
 from modules.gac_net import GACNet
 from modules.lcz_res_net import resnet18, resnet34, resnet50, resnet101
 from modules.lcz_dense_net import densenet121, densenet169, densenet201, densenet161
 
-from modules.losses import FocalCE, SoftCE
-
+from modules.losses import FocalCE
 SEED = 502
-EPOCH = 150
+EPOCH = 10
 BATCH_SIZE = 64
-LR = 1.25e-4
+LR = 1e-4
 LAMBDA = 4
-USE_CLASS_WEIGHT = True
-MIX_UP = False
+USE_CLASS_WEIGHT = False
+MIX_UP = True
 FOCAL = False
 N_CHANNEL = 26
 MODEL = 'GAC'
-#MODEL = 'DENSE'
+# MODEL = 'DENSE'
 # MODEL = 'RES'
 # MODEL = 'LCZ'
 
@@ -91,7 +89,12 @@ if __name__ == '__main__':
 	# val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
 
 	# 合并再划分 val*10 全在训练及
-	data_source = H5DataSource([train_file]+[val_file]*10, BATCH_SIZE, [0.114] + [0]*10, seed=SEED)
+	# data_source = H5DataSource([train_file]+[val_file]*10, BATCH_SIZE, [0.114] + [0]*10, seed=SEED)
+	# train_loader = MyDataLoader(data_source.h5fids, data_source.train_indices)
+	# val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
+
+	# train val 固定比例
+	data_source = SampledDataSorce([train_file, val_file], BATCH_SIZE, sample_rate=[0.5, 0.5], seed=SEED)
 	train_loader = MyDataLoader(data_source.h5fids, data_source.train_indices)
 	val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
 
@@ -108,38 +111,37 @@ if __name__ == '__main__':
 	print(node_class_weights)
 	print(class_weights)
 
-	if MODEL == 'LCZ':
-		model = LCZNet(channel=N_CHANNEL, n_class=17, base=64, dropout=0.3)
-	elif MODEL == 'GAC':
+	if MODEL == 'GAC':
 		group_sizes = [3, 3,
 					   3, 3, 2, 2,
 					   4, 3, 3]
 		model = GACNet(group_sizes, 17, 32)
 	elif MODEL == 'RES':
-		model = resnet18(N_CHANNEL, 17)
+		model = resnet50(N_CHANNEL, 17)
 	elif MODEL == 'DENSE':
 		model = densenet201(N_CHANNEL, 17, drop_rate=0.3)
 	else:
-		model = LCZNet(channel=N_CHANNEL, n_class=17, base=64, dropout=0.3)
+		group_sizes = [3, 3,
+					   3, 3, 2, 2,
+					   4, 3, 3]
+		model = GACNet(group_sizes, 17, 32)
 
 	model = model.cuda()
 	model_param_num = 0
 	for param in list(model.parameters()):
 		model_param_num += param.nelement()
 	print('num_params: %d' % (model_param_num))
-	if FOCAL or MIX_UP:
-		crit = SoftCE
-		if FOCAL:
-			crit = FocalCE
+	if FOCAL:
+		crit = FocalCE
 	else:
-		crit = nn.NLLLoss
+		crit = nn.CrossEntropyLoss
 
 	if USE_CLASS_WEIGHT:
 		criteria = crit(weight=class_weights).cuda()
 	else:
 		criteria = crit().cuda()
-	optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=3e-2)
-	lr_scheduler = CosineAnnealingLR(optimizer, T_max=len(train_loader), eta_min=1e-7)
+	optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=1e-2)
+	lr_scheduler = CosineAnnealingLR(optimizer, T_max=2 * len(train_loader), eta_min=1e-7)
 
 	if os.path.isfile(cur_model_path):
 		print('load training param, ', cur_model_path)
@@ -181,17 +183,13 @@ if __name__ == '__main__':
 				train_out = model(train_input)
 				if MIX_UP:
 					y_1, y_2, lam = train_target
-					loss = mixup_criterion(criteria, train_out, y_1, y_2, lam)
-					# loss_node = mixup_criterion(criteria2, train_node_out, y_1[:, :5], y_2[:, :5], lam)
+					loss = mixup_criterion(criteria, train_out, y_1.max(-1)[1], y_2.max(-1)[1], lam)
 					train_target = lam * y_1 + (1 - lam) * y_2
 				elif FOCAL:
 					loss = criteria(train_out, train_target)
-
 				else:
-					loss = criteria(torch.log(train_out), train_target.max(-1)[1])
-
+					loss = criteria(train_out, train_target.max(-1)[1])
 				train_hit += (train_out.max(-1)[1] == train_target.max(-1)[1]).sum().item()
-
 
 				loss.backward()
 
@@ -203,8 +201,6 @@ if __name__ == '__main__':
 				loss_print += loss.item()
 				step += 1
 				global_step += 1
-
-				# train_hit += (train_out.max(-1)[1] == train_target).sum().item()
 
 				train_sample += train_target.size()[0]
 
@@ -236,10 +232,10 @@ if __name__ == '__main__':
 						for val_data, val_label, f_idx_val in val_loader:
 							val_input, val_target = prepare_batch(val_data, val_label, f_idx_val, mean, std)
 							val_out = model(val_input)
-							if FOCAL or MIX_UP:
-								val_loss_total += criteria(val_out, val_target).item()
+							if FOCAL:
+								val_loss_total += criteria(train_out, train_target)
 							else:
-								val_loss_total += criteria(torch.log(val_out), val_target.max(-1)[1]).item()
+								val_loss_total += criteria(val_out, val_target.max(-1)[1]).item()
 							val_hit += (val_out.max(-1)[1] == val_target.max(-1)[1]).sum().item()
 							val_sample += val_target.size()[0]
 							val_step += 1
@@ -257,7 +253,7 @@ if __name__ == '__main__':
 					else:
 						state = {}
 
-					if state == {} or state['best_score'] < val_hit / val_sample:
+					if (state == {} or state['best_score'] < val_hit / val_sample):
 						state['best_model_state'] = model.state_dict()
 						state['best_opt_state'] = optimizer.state_dict()
 						state['best_lr_scheduler_state'] = lr_scheduler.state_dict()

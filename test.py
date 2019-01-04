@@ -2,10 +2,10 @@ import os
 import h5py
 from tqdm import tqdm
 import torch
+import torch.nn.functional as F
 import numpy as np
 from dataloader import MyDataLoader, H5DataSource
 from preprocess import prepare_batch
-from modules.lcz_net import LCZNet
 from modules.gac_net import GACNet
 from modules.lcz_res_net import resnet18, resnet34, resnet50
 from modules.lcz_dense_net import densenet121, densenet169, densenet201, densenet161
@@ -22,10 +22,11 @@ MODEL = 'GAC'
 # MODEL = 'RES'
 # MODEL = 'LCZ'
 
-model_dir = './checkpoints/model_58940'  # DenseNet201 cosine trained on train+val10 0.9744 0.804
-model_dir = './checkpoints/model_28048'  # GACNet cosine trained on train+val10  0.9738  0.807
 
-model_dir = './checkpoints/model_1416'  # GACNet cosine GP trained on train+val10  0.9738  0.807
+model_dir = './checkpoints/model_93071'  # GACNet cosine GP  L2 3e-2 trained on train val 1:1  0.9046 0.852/0.8729 0.833
+model_dir = './checkpoints/model_12224'  # GACNet cosine GP  L2 1e-2 trained on train val 1:1  0.9453 0.807
+model_dir = './checkpoints/model_10774'  # GACNet cosine GP  L2 MIXUP 1.5e-2 trained on train val 1:1  0.89417 0.809
+model_dir = './checkpoints/model_83173'  # GACNet cosine GP  L2 MIXUP 1e-2 trained on train val 1:1  0.9046 ?
 
 cur_model_path = os.path.join(model_dir, 'state_curr.ckpt')
 
@@ -48,19 +49,20 @@ if __name__ == '__main__':
 	data_source = H5DataSource([test_file], BATCH_SIZE, shuffle=False)
 	test_loader = MyDataLoader(data_source.h5fids, data_source.indices)
 
-	if MODEL == 'LCZ':
-		model = LCZNet(channel=N_CHANNEL, n_class=17, base=64, dropout=0.3)
-	elif MODEL == 'GAC':
+	if MODEL == 'GAC':
 		group_sizes = [3, 3,
 					   3, 3, 2, 2,
 					   4, 3, 3]
 		model = GACNet(group_sizes, 17, 32)
 	elif MODEL == 'RES':
-		model = resnet18(N_CHANNEL, 17)
+		model = resnet50(N_CHANNEL, 17)
 	elif MODEL == 'DENSE':
 		model = densenet201(N_CHANNEL, 17, drop_rate=0.3)
 	else:
-		model = LCZNet(channel=N_CHANNEL, n_class=17, base=64, dropout=0.3)
+		group_sizes = [3, 3,
+					   3, 3, 2, 2,
+					   4, 3, 3]
+		model = GACNet(group_sizes, 17, 32)
 	model = model.cuda()
 
 	best_score = 0
@@ -80,7 +82,7 @@ if __name__ == '__main__':
 		model.eval()
 		for test_data, _, fidx in tqdm(test_loader):
 			test_input, _ = prepare_batch(test_data, None, fidx, mean, std)
-			test_out = model(test_input)
+			test_out = F.softmax(model(test_input))
 			pred = test_out.max(-1)[1].detach().cpu().numpy()
 			score = test_out.detach().cpu().numpy()
 			if total_pred is None:

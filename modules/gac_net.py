@@ -87,7 +87,7 @@ class GACNet(nn.Module):
 
 		out = self.bottelneck(out)  # b, 16*base, s/4, s/4
 
-		out = F.softmax(self.fc(out).view(out.size(0), -1), -1)
+		out = self.fc(out).view(out.size(0), -1)
 
 		return out
 

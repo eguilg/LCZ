@@ -19,7 +19,7 @@ class CbamBlock(nn.Module):
 		self.conv2 = conv3x3(planes, planes)
 		self.bn2 = nn.BatchNorm2d(planes)
 
-		self.cbam = CBAM_Module(planes, 8)
+		self.cbam = CBAM_Module(planes, 16)
 		self.downsample = downsample
 		self.stride = stride
 
@@ -96,18 +96,18 @@ class LCZResNet(nn.Module):
 		self.bn1 = nn.BatchNorm2d(64)
 		self.relu = nn.ReLU(inplace=True)
 		# self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)  # 16 * 16
-		self.layer1 = self._make_layer(block, 64, layers[0])   				# 32 * 32
+		self.layer1 = self._make_layer(block, 64, layers[0], stride=1)	 # 32 * 32
 		self.layer2 = self._make_layer(block, 128, layers[1], stride=2)  # 16 * 16
 		self.layer3 = self._make_layer(block, 256, layers[2], stride=2)  # 8 * 8
 		self.layer4 = self._make_layer(block, 512, layers[3], stride=2)  # 4 * 4
-		# self.avgpool = nn.AvgPool2d(2, stride=1)
-		# self.fc = nn.Linear(512 * block.expansion, num_classes)
 
-		self.fc = nn.Conv2d(512, num_classes, 4)
+		self.fc = nn.Sequential(nn.Conv2d(512 * block.expansion, num_classes, 1),
+								nn.AvgPool2d(4)
+								)
 
 		for m in self.modules():
 			if isinstance(m, nn.Conv2d):
-				nn.init.kaiming_normal(m.weight.data)
+				nn.init.kaiming_normal_(m.weight.data)
 			elif isinstance(m, nn.BatchNorm2d):
 				m.weight.data.fill_(1)
 				m.bias.data.zero_()
@@ -144,7 +144,7 @@ class LCZResNet(nn.Module):
 		x = self.layer3(x)
 		x = self.layer4(x)
 
-		x = F.softmax(self.fc(x).view(x.size(0), -1), -1)
+		x = self.fc(x).view(x.size(0), -1)
 
 		return x
 

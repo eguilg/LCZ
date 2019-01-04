@@ -5,7 +5,7 @@ input_dir = './score'
 inputs = [
 	'score_0.9738586523125997.csv',  # 0.804
 	'score_0.9744318181818182.csv',  # 0.807
-	'score_0.9802382376395534.csv',
+	'score_0.9046128156960969.csv',
 	'score_xgb_3full_0.9472395180011692.csv',  # 不知道
 	'score_xgb_4full_0.9358961988387074.csv',  # 不知道
 	'score_xgb_full_0.9702184660268017.csv'  # 0.816 以上
