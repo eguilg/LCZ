@@ -4,7 +4,6 @@ import h5py
 from tqdm import tqdm
 import torch
 import torch.nn as nn
-from torch.optim.lr_scheduler import CosineAnnealingLR
 import numpy as np
 from dataloader import MyDataLoader, H5DataSource, SampledDataSorce
 from preprocess import prepare_batch
@@ -12,12 +11,14 @@ from modules.gac_net import GACNet
 from modules.lcz_res_net import resnet18, resnet34, resnet50, resnet101
 from modules.lcz_dense_net import densenet121, densenet169, densenet201, densenet161
 
+from modules.scheduler import RestartCosineAnnealingLR, CosineAnnealingLR
+
 from modules.losses import FocalCE
 SEED = 502
-EPOCH = 10
+EPOCH = 15
 BATCH_SIZE = 64
 LR = 1e-4
-LAMBDA = 4
+DECAY = 1.5e-2
 USE_CLASS_WEIGHT = False
 MIX_UP = True
 FOCAL = False
@@ -103,9 +104,6 @@ if __name__ == '__main__':
 	#  origin class weights
 	class_weights = (1/17 / class_weights).clamp(0, 1)
 	node_class_weights = (1 / 5 / node_class_weights).clamp(0, 1)
-	# focal class weights
-	# class_weights = (1 - class_weights) ** LAMBDA
-	# node_class_weights = (1 - node_class_weights) ** LAMBDA
 
 
 	print(node_class_weights)
@@ -140,8 +138,8 @@ if __name__ == '__main__':
 		criteria = crit(weight=class_weights).cuda()
 	else:
 		criteria = crit().cuda()
-	optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=1e-2)
-	lr_scheduler = CosineAnnealingLR(optimizer, T_max=2 * len(train_loader), eta_min=1e-7)
+	optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=DECAY)
+	lr_scheduler = RestartCosineAnnealingLR(optimizer, T_max=2 * len(train_loader), eta_min=1e-7)
 
 	if os.path.isfile(cur_model_path):
 		print('load training param, ', cur_model_path)
@@ -261,37 +259,6 @@ if __name__ == '__main__':
 						state['best_score'] = val_hit / val_sample
 						state['best_epoch'] = e
 						state['best_step'] = global_step
-
-
-						# if state['best_score'] > 0.90:
-						# 	grade = 3
-						# elif state['best_score'] > 0.89:
-						# 	grade = 2
-						# elif state['best_score'] > 0.88:
-						# 	grade = 1
-						# else:
-						# 	grade = 0
-					# if state == {} or state['val_score'] < val_hit / val_sample:
-					# 	val_no_improve = 0
-					# else:
-					# 	val_no_improve += 1
-					#
-					# if val_no_improve >= int(drop_lr_frq):
-					# 	print('dropping lr...')
-					# 	val_no_improve = 0
-					# 	drop_lr_frq += 1
-					# 	lr_total = 0
-					# 	lr_num = 0
-					# 	for param_group in optimizer.param_groups:
-					# 		if param_group['lr'] > 1e-5:
-					# 			param_group['lr'] *= 0.6
-					# 		else:
-					# 			param_group['lr'] = LR
-					#
-					# 		lr_total += param_group['lr']
-					# 		lr_num += 1
-					# 	drop_lr_frq = 1
-					# 	print('curr avg lr is {}'.format(lr_total / lr_num))
 
 					state['cur_model_state'] = model.state_dict()
 					state['cur_opt_state'] = optimizer.state_dict()

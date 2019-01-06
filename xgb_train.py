@@ -11,7 +11,7 @@ dense_test_file = '/home/zydq/Datasets/LCZ/dense_f_test.csv'
 
 NUM_ROUNDS = 100000
 SEED = 502
-FOLD = 4
+FOLD = 3
 GABOR=False
 extra  = ''
 
@@ -77,12 +77,12 @@ if __name__ == '__main__':
 		val_res_X, val_res_Y = sm.fit_resample(val_X, val_Y)
 
 		# train on big one
-		# x_train, x_val = train_X[train_index], train_X[val_index]
-		# y_train, y_val = train_Y[train_index], train_Y[val_index]
+		x_train, x_val = train_X[train_index], train_X[val_index]
+		y_train, y_val = train_Y[train_index], train_Y[val_index]
 
 		# train on small one
-		x_val, x_train = train_X[train_index], train_X[val_index]
-		y_val, y_train = train_Y[train_index], train_Y[val_index]
+		# x_val, x_train = train_X[train_index], train_X[val_index]
+		# y_val, y_train = train_Y[train_index], train_Y[val_index]
 
 		x_train = np.concatenate([x_train, val_res_X], axis=0)
 		y_train = np.concatenate([y_train, val_res_Y], axis=0)
@@ -100,14 +100,17 @@ if __name__ == '__main__':
 			'objective': 'multi:softprob',  # 多分类的问题
 			'eval_metric': 'merror',
 			'num_class': 17,  # 类别数，与 multisoftmax 并用
-			'gamma': 0.20,  # 用于控制是否后剪枝的参数,越大越保守，一般0.1、0.2这样子。
-			'max_depth': 12,  # 构建树的深度，越大越容易过拟合
-			'lambda': 2.5,  # 控制模型复杂度的权重值的L2正则化项参数，参数越大，模型越不容易过拟合。
+			'gamma': 2,  # 用于控制是否后剪枝的参数,越大越保守，一般0.1、0.2这样子。
+			'max_depth': 3,  # 构建树的深度，越大越容易过拟合
+			'n_estimators': 15,
+			'lambda': 5,  # L2
+			'alpha': 5, # L1
 			'subsample': 0.5,  # 随机采样训练样本
-			'colsample_bytree': 0.7,  # 生成树时进行的列采样
-			'min_child_weight': 3,
+			'colsample_by*': 0.5,  # 生成树时进行的列采样
+			'min_child_weight': 5,
+			'scale_pos_weight': 5,
 			'silent': 1,  # 设置成1则没有运行信息输出，最好是设置为0.
-			'eta': 0.01,  # 如同学习率
+			'eta': 0.02,  # 如同学习率
 			'seed': 502,
 			# 'nthread': 4,  # cpu 线程数
 		}
@@ -115,7 +118,7 @@ if __name__ == '__main__':
 		d_train = xgb.DMatrix(x_train, label=y_train, feature_names=feat_names)
 		d_val = xgb.DMatrix(x_val, label=y_val, feature_names=feat_names)
 		watchlist = [(d_train, 'train'), (d_val, 'valid')]
-		bst_xgb = xgb.train(params, d_train, NUM_ROUNDS, watchlist, early_stopping_rounds=15, verbose_eval=10)
+		bst_xgb = xgb.train(params, d_train, NUM_ROUNDS, watchlist, early_stopping_rounds=10, verbose_eval=10)
 		# fold_xgb.append(bst_xgb)
 		val_pred = bst_xgb.predict(d_val).reshape(y_val.shape[0], 17)
 		val_score = (np.argmax(val_pred, -1) == y_val).sum() / y_val.shape[0]

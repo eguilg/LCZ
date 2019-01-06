@@ -26,7 +26,7 @@ MODEL = 'GAC'
 model_dir = './checkpoints/model_93071'  # GACNet cosine GP  L2 3e-2 trained on train val 1:1  0.9046 0.852/0.8729 0.833
 model_dir = './checkpoints/model_12224'  # GACNet cosine GP  L2 1e-2 trained on train val 1:1  0.9453 0.807
 model_dir = './checkpoints/model_10774'  # GACNet cosine GP  L2 MIXUP 1.5e-2 trained on train val 1:1  0.89417 0.809
-model_dir = './checkpoints/model_83173'  # GACNet cosine GP  L2 MIXUP 1e-2 trained on train val 1:1  0.9046 ?
+model_dir = './checkpoints/model_83173'  # GACNet cosine GP  L2 MIXUP 1e-2 trained on train val 1:1  0.9163 ?
 
 cur_model_path = os.path.join(model_dir, 'state_curr.ckpt')
 
@@ -82,7 +82,7 @@ if __name__ == '__main__':
 		model.eval()
 		for test_data, _, fidx in tqdm(test_loader):
 			test_input, _ = prepare_batch(test_data, None, fidx, mean, std)
-			test_out = F.softmax(model(test_input))
+			test_out = F.softmax(model(test_input), -1)
 			pred = test_out.max(-1)[1].detach().cpu().numpy()
 			score = test_out.detach().cpu().numpy()
 			if total_pred is None:
