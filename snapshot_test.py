@@ -24,6 +24,7 @@ if TEST_B:
 mean_std_file = '/home/zydq/Datasets/LCZ/mean_std_f_test.h5'
 
 model_name = 'GAC_mixup0_foc1_weight0_decay0.03'
+# model_name = 'GAC_mixup0_foc1_weight0_decay0.03_onval'
 
 model_dir = os.path.join('./checkpoints/', model_name)
 MODEL = model_name.split('_')[0]
@@ -39,7 +40,6 @@ models = [
 	'M_6.ckpt'
 ]
 
-cur_model_path = os.path.join(model_dir, 'state_curr.ckpt')
 
 if not os.path.isdir(submit_dir):
 	os.mkdir(submit_dir)
