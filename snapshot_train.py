@@ -52,6 +52,7 @@ if not os.path.isdir(model_dir):
 	os.mkdir(model_dir)
 
 cur_model_path = os.path.join(model_dir, 'M_curr.ckpt')
+best_model_path = os.path.join(model_dir, 'M_best.ckpt')
 
 if __name__ == '__main__':
 
@@ -147,6 +148,14 @@ if __name__ == '__main__':
 	optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=DECAY)
 	lr_scheduler = RestartCosineAnnealingLR(optimizer, T_max=int(T * len(train_loader)), eta_min=1e-7)
 
+	if os.path.isfile(best_model_path):
+		print('load training param, ', best_model_path)
+		best_state = torch.load(best_model_path)
+		best_acc = best_state['score']
+		del best_state
+	else:
+		best_acc = 0
+
 	if os.path.isfile(cur_model_path):
 		print('load training param, ', cur_model_path)
 		state = torch.load(cur_model_path)
@@ -158,12 +167,10 @@ if __name__ == '__main__':
 			global_step = lr_scheduler.last_epoch + 1
 		else:
 			global_step = 0
-
 	else:
 		state = None
 		epoch_list = range(EPOCH)
 		grade = 1
-
 		global_step = 0
 
 	grade = 0
@@ -256,7 +263,6 @@ if __name__ == '__main__':
 						  .format(e, step, len(train_loader),
 								  val_loss_total / val_step,
 								  val_hit / val_sample))
-					print('-' * 80)
 
 					if os.path.isfile(cur_model_path):
 						state = torch.load(cur_model_path)
@@ -271,8 +277,19 @@ if __name__ == '__main__':
 
 					torch.save(state, cur_model_path)
 					print('saved curr model to ', cur_model_path)
+
 					if global_step % int(T * lr_scheduler.T_max) == 0:
 						M_name = '_'.join(['M', str(global_step // int(T * lr_scheduler.T_max))] + '.ckpt')
 						M_path = os.path.join(model_dir, M_name)
+
 						torch.save(state, M_path)
 						print('saved snapshot model to ', M_path)
+					elif best_acc <= state['score']:
+						torch.save(state, best_model_path)
+						print('saved best model to ', best_model_path)
+
+					if best_acc <= state['score']:
+						best_acc = state['score']
+
+					print('curr best acc:', best_acc)
+					print('-' * 80)

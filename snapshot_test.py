@@ -29,18 +29,17 @@ model_dir = os.path.join('./checkpoints/', model_name)
 MODEL = model_name.split('_')[0]
 
 models = [
-		  # 'M_curr.ckpt',
-		  'M_1.ckpt',
-		  'M_2.ckpt',
-		  'M_3.ckpt',
-		  'M_4.ckpt',
-		  'M_5.ckpt',
-		  'M_6.ckpt'
-		  ]
-
+	# 'M_curr.ckpt',
+	'M_best.ckpt',
+	'M_1.ckpt',
+	'M_2.ckpt',
+	'M_3.ckpt',
+	'M_4.ckpt',
+	'M_5.ckpt',
+	'M_6.ckpt'
+]
 
 cur_model_path = os.path.join(model_dir, 'state_curr.ckpt')
-
 
 if not os.path.isdir(submit_dir):
 	os.mkdir(submit_dir)
@@ -91,7 +90,6 @@ if __name__ == '__main__':
 			print('loss:', m_loss)
 			print('-' * 80)
 			print('Testing...')
-
 
 			total_score = None
 			with torch.no_grad():
