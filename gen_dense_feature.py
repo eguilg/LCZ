@@ -8,7 +8,6 @@ from dataloader import H5DataSource, MyDataLoader
 from preprocess import preprocess_batch
 
 NC_IN = 26
-NC_OUT = 56
 BATCH_SIZE = 3000
 
 
@@ -67,7 +66,9 @@ def gabor_batch(weights, batch_input):
 
 
 def gen_dense_feat(input_file, out_file, gabor=False):
+	NC_OUT = 26
 	if gabor:
+		NC_OUT = 56
 		filters = GaborFilters()
 		weights = make_gabor_conv_weight(filters, 10)
 
@@ -123,7 +124,7 @@ if __name__ == '__main__':
 	val_file = '/home/zydq/Datasets/LCZ/validation.h5'
 	testA_file = '/home/zydq/Datasets/LCZ/round1_test_a_20181109.h5'
 
-	testB_file = '/home/zydq/Datasets/LCZ/round1_test_a_20181109.h5'
+	testB_file = '/home/zydq/Datasets/LCZ/round1_test_b_20190104.h5'
 
 	dense_train_file = '/home/zydq/Datasets/LCZ/dense_f_train.csv'
 	dense_val_file = '/home/zydq/Datasets/LCZ/dense_f_val.csv'

@@ -2,16 +2,31 @@ import xgboost as xgb
 import numpy as np
 import pandas as pd
 import os
-from sklearn.model_selection import KFold
 
 # dense_train_file = '/home/zydq/Datasets/LCZ/dense_f_train.csv'
 # dense_val_file = '/home/zydq/Datasets/LCZ/dense_f_val.csv'
-dense_test_file = '/home/zydq/Datasets/LCZ/dense_f_test.csv'
-model_paths = [
-	'./xgb_ckp_5fold/xgb_fold0.model',
-	# './xgb_ckp_5fold/xgb_fold1.model',
+TEST_B = True
 
+dense_test_file = '/home/zydq/Datasets/LCZ/dense_f_test.csv'
+submit_dir = './submit/'
+score_dir = './score/'
+if TEST_B:
+	dense_test_file = '/home/zydq/Datasets/LCZ/dense_f_testB.csv'
+	submit_dir = './submit_B/'
+	score_dir = './score_B/'
+
+
+if not os.path.isdir(submit_dir):
+	os.mkdir(submit_dir)
+if not os.path.isdir(score_dir):
+	os.mkdir(score_dir)
+
+model_paths = [
+	'./xgb_ckp_3fold/xgb_3fold0.model',
+	'./xgb_ckp_3fold/xgb_3fold1.model',
+	'./xgb_ckp_3fold/xgb_3fold2.model',
 ]
+
 
 if __name__ == '__main__':
 	# train_df = pd.read_csv(dense_train_file)
@@ -33,6 +48,6 @@ if __name__ == '__main__':
 
 	pred_total = pred_total.mean(-1)
 	submit = np.eye(17)[pred_total.argmax(-1).reshape(-1)]
-	np.savetxt('./submit/sub_xgb_full' + '.csv', submit, delimiter=',', fmt='%d')
-	np.savetxt('./score/score_xgb_full' + '.csv', pred_total, delimiter=',', fmt='%.5f')
+	np.savetxt(os.path.join(submit_dir, 'sub_xgb_full' + '.csv'), submit, delimiter=',', fmt='%d')
+	np.savetxt(os.path.join(score_dir, 'score_xgb_full' + '.csv'), pred_total, delimiter=',', fmt='%.5f')
 

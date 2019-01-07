@@ -19,10 +19,10 @@ from modules.losses import FocalCE
 SEED = 502
 T = 1.5
 M = 6
-EPOCH = math.ceil(T * M)
+EPOCH = int(math.ceil(T * M))
 BATCH_SIZE = 64
 LR = 1e-4
-DECAY = 1.5e-2
+DECAY = 3e-2
 USE_CLASS_WEIGHT = False
 MIX_UP = False
 FOCAL = True
@@ -41,13 +41,17 @@ mean_std_file = '/home/zydq/Datasets/LCZ/mean_std_f_trainval.h5'
 mean_std_file_train = '/home/zydq/Datasets/LCZ/mean_std_f_train.h5'
 mean_std_file_val = '/home/zydq/Datasets/LCZ/mean_std_f_val.h5'
 
-model_dir = './checkpoints/model_' + str(round(time.time() % 100000))
+name_arg = [MODEL, 'mixup' + str(int(MIX_UP)), 'foc' + str(int(FOCAL)), 'weight' + str(int(USE_CLASS_WEIGHT)),
+			'decay' + str(DECAY)]
+model_name = '_'.join(name_arg)
+model_dir = './checkpoints/' + model_name
 
 if not os.path.isdir('./checkpoints/'):
 	os.mkdir('./checkpoints/')
 if not os.path.isdir(model_dir):
 	os.mkdir(model_dir)
-cur_model_path = os.path.join(model_dir, 'state_curr.ckpt')
+
+cur_model_path = os.path.join(model_dir, 'M_curr.ckpt')
 
 if __name__ == '__main__':
 
@@ -146,13 +150,15 @@ if __name__ == '__main__':
 	if os.path.isfile(cur_model_path):
 		print('load training param, ', cur_model_path)
 		state = torch.load(cur_model_path)
-		model.load_state_dict(state['cur_model_state'])
-		optimizer.load_state_dict(state['cur_opt_state'])
-		if 'cur_lr_scheduler_state' in state:
-			lr_scheduler.load_state_dict(state['cur_lr_scheduler_state'])
+		model.load_state_dict(state['model_state'])
+		optimizer.load_state_dict(state['opt_state'])
+		if 'lr_scheduler_state' in state:
+			lr_scheduler.load_state_dict(state['scheduler_state'])
 			lr_scheduler.optimizer = optimizer
-		epoch_list = range(state['cur_epoch'] + 1, state['cur_epoch'] + 1 + EPOCH)
-		global_step = state['cur_step']
+			global_step = lr_scheduler.last_epoch + 1
+		else:
+			global_step = 0
+
 	else:
 		state = None
 		epoch_list = range(EPOCH)
@@ -163,7 +169,7 @@ if __name__ == '__main__':
 	grade = 0
 	print_every = 50
 	last_val_step = global_step
-	val_every = [1000, 700, 500, 350, 100]
+	val_every = 1000
 	drop_lr_frq = 1
 	val_no_improve = 0
 	loss_print = 0
@@ -203,7 +209,7 @@ if __name__ == '__main__':
 
 				loss_print += loss.item()
 				step += 1
-				global_step += 1
+				global_step = lr_scheduler.last_epoch + 1
 
 				train_sample += train_target.size()[0]
 
@@ -222,7 +228,7 @@ if __name__ == '__main__':
 					train_hit = 0
 					train_sample = 0
 
-				if global_step - last_val_step == val_every[grade]:
+				if global_step - last_val_step == val_every or global_step % int(T * lr_scheduler.T_max) == 0:
 					print('-' * 80)
 					print('Evaluating...')
 					last_val_step = global_step
@@ -257,21 +263,16 @@ if __name__ == '__main__':
 					else:
 						state = {}
 
-					if (state == {} or state['best_score'] < val_hit / val_sample):
-						state['best_model_state'] = model.state_dict()
-						state['best_opt_state'] = optimizer.state_dict()
-						state['best_lr_scheduler_state'] = lr_scheduler.state_dict()
-						state['best_loss'] = val_loss_total / val_step
-						state['best_score'] = val_hit / val_sample
-						state['best_epoch'] = e
-						state['best_step'] = global_step
-
-					state['cur_model_state'] = model.state_dict()
-					state['cur_opt_state'] = optimizer.state_dict()
-					state['cur_lr_scheduler_state'] = lr_scheduler.state_dict()
-					state['cur_epoch'] = e
-					state['val_loss'] = val_loss_total / val_step
-					state['val_score'] = val_hit / val_sample
-					state['cur_step'] = global_step
+					state['model_state'] = model.state_dict()
+					state['opt_state'] = optimizer.state_dict()
+					state['lr_scheduler_state'] = lr_scheduler.state_dict()
+					state['loss'] = val_loss_total / val_step
+					state['score'] = val_hit / val_sample
 
 					torch.save(state, cur_model_path)
+					print('saved curr model to ', cur_model_path)
+					if global_step % int(T * lr_scheduler.T_max) == 0:
+						M_name = '_'.join(['M', str(global_step // int(T * lr_scheduler.T_max))] + '.ckpt')
+						M_path = os.path.join(model_dir, M_name)
+						torch.save(state, M_path)
+						print('saved snapshot model to ', M_path)

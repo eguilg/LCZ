@@ -1,6 +1,7 @@
 from torch.optim.lr_scheduler import _LRScheduler, CosineAnnealingLR
 import math
 
+
 class RestartCosineAnnealingLR(_LRScheduler):
 	def __init__(self, optimizer, T_max, eta_min=0, last_epoch=-1):
 		self.T_max = T_max

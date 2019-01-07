@@ -14,7 +14,15 @@ import torchvision.models as models
 
 BATCH_SIZE = 32
 N_CHANNEL = 26
+TEST_B = True
+
 test_file = '/home/zydq/Datasets/LCZ/round1_test_a_20181109.h5'
+submit_dir = './submit/'
+score_dir = './score/'
+if TEST_B:
+	test_file = '/home/zydq/Datasets/LCZ/round1_test_b_20190104.h5'
+	submit_dir = './submit_B/'
+	score_dir = './score_B/'
 mean_std_file = '/home/zydq/Datasets/LCZ/mean_std_f_test.h5'
 
 MODEL = 'GAC'
@@ -23,17 +31,19 @@ MODEL = 'GAC'
 # MODEL = 'LCZ'
 
 
-model_dir = './checkpoints/model_93071'  # GACNet cosine GP  L2 3e-2 trained on train val 1:1  0.9046 0.852/0.8729 0.833
-model_dir = './checkpoints/model_12224'  # GACNet cosine GP  L2 1e-2 trained on train val 1:1  0.9453 0.807
-model_dir = './checkpoints/model_10774'  # GACNet cosine GP  L2 MIXUP 1.5e-2 trained on train val 1:1  0.89417 0.809
-model_dir = './checkpoints/model_83173'  # GACNet cosine GP  L2 MIXUP 1e-2 trained on train val 1:1  0.9163 ?
+model_dir = './checkpoints/model_93071'  # GACNet cosine GP  L2 3e-2 trained on train val 1:1  0.9046 A0.852/0.8729 A0.833
+model_dir = './checkpoints/model_12224'  # GACNet cosine GP  L2 1e-2 trained on train val 1:1  0.9453 A0.807
+model_dir = './checkpoints/model_10774'  # GACNet cosine GP  L2 1.5e-2 MIXUP trained on train val 1:1  0.89417 A0.809
+model_dir = './checkpoints/model_83173'  # GACNet cosine GP  L2 1e-2 MIXUP trained on train val 1:1  0.9163 A0.837
+model_dir = './checkpoints/model_79740'  # GACNet cosine GP  L2 1.5e-2 FOCAL trained on train val 1:1 0.9307
 
 cur_model_path = os.path.join(model_dir, 'state_curr.ckpt')
 
-if not os.path.isdir('./submit/'):
-	os.mkdir('./submit/')
-if not os.path.isdir('./score/'):
-	os.mkdir('./score/')
+
+if not os.path.isdir(submit_dir):
+	os.mkdir(submit_dir)
+if not os.path.isdir(score_dir):
+	os.mkdir(score_dir)
 if __name__ == '__main__':
 
 	mean_std_h5 = h5py.File(mean_std_file, 'r')
@@ -92,7 +102,7 @@ if __name__ == '__main__':
 				total_pred = np.concatenate([total_pred, pred])
 				total_score = np.concatenate([total_score, score])
 	submit = np.eye(17)[total_pred.reshape(-1)]
-	np.savetxt('./submit/sub_' + str(best_score) + '.csv', submit, delimiter=',', fmt='%d')
-	np.savetxt('./score/score_' + str(best_score) + '.csv', total_score, delimiter=',', fmt='%.5f')
+	np.savetxt(os.path.join(submit_dir, 'sub_' + str(best_score) + '.csv'), submit, delimiter=',', fmt='%d')
+	np.savetxt(os.path.join(score_dir,'score_' + str(best_score) + '.csv'), total_score, delimiter=',', fmt='%.5f')
 	print('completed!')
 	print('-' * 80)

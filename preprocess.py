@@ -30,26 +30,34 @@ def preprocess_batch(x_b, mean=None, std=None):
 
 	# B8 & b4
 	L = 0.428
-	SAVI = (S2_BANDS[:,:,:,6:7] - S2_BANDS[:,:,:,2:3]) / (S2_BANDS[:,:,:,6:7] + S2_BANDS[:,:,:,2:3] + L) * (1.0 + L) # -0.65 ~ 0.65
+	SAVI = (S2_BANDS[:, :, :, 6:7] - S2_BANDS[:, :, :, 2:3]) / (S2_BANDS[:, :, :, 6:7] + S2_BANDS[:, :, :, 2:3] + L) * (
+				1.0 + L)  # -0.65 ~ 0.65
 	SAVI = (SAVI + 0.65) / 1.3  # B8 & B4
-	PSSR = (S2_BANDS[:,:,:,6:7] / S2_BANDS[:,:,:,2:3].clamp_min(1e-20) - 0.058) / (17.157 - 0.058)
+	PSSR = (S2_BANDS[:, :, :, 6:7] / S2_BANDS[:, :, :, 2:3].clamp_min(1e-20) - 0.058) / (17.157 - 0.058)
 	PSSR = PSSR.clamp(0, 1)  # b8 & b4
-	NDVI = (S2_BANDS[:, :, :, 6:7] - S2_BANDS[:, :, :, 2:3]) / (S2_BANDS[:, :, :, 6:7] + S2_BANDS[:, :, :, 2:3]).clamp_min(1e-20)
+	NDVI = (S2_BANDS[:, :, :, 6:7] - S2_BANDS[:, :, :, 2:3]) / (
+				S2_BANDS[:, :, :, 6:7] + S2_BANDS[:, :, :, 2:3]).clamp_min(1e-20)
 	NDVI = (NDVI + 1) / 2  # b8 & b4
-	UCNDVI = 1 - 2*torch.sqrt((S2_BANDS[:, :, :, 6:7] * 0.02)**2 + (S2_BANDS[:, :, :, 2:3] * 0.03) **2); # uncertainty of NDVI
+	UCNDVI = 1 - 2 * torch.sqrt(
+		(S2_BANDS[:, :, :, 6:7] * 0.02) ** 2 + (S2_BANDS[:, :, :, 2:3] * 0.03) ** 2);  # uncertainty of NDVI
 
 	# B8 & B11 / B12
-	NDWI = (S2_BANDS[:,:,:,6:7] - S2_BANDS[:,:,:,8:9]) / (S2_BANDS[:,:,:,6:7] + S2_BANDS[:,:,:,8:9]).clamp_min(1e-20)
+	NDWI = (S2_BANDS[:, :, :, 6:7] - S2_BANDS[:, :, :, 8:9]) / (
+				S2_BANDS[:, :, :, 6:7] + S2_BANDS[:, :, :, 8:9]).clamp_min(1e-20)
 	NDWI = (NDWI + 1) / 2
 	MSI = (S2_BANDS[:, :, :, 8:9] / S2_BANDS[:, :, :, 6:7].clamp_min(1e-20) - 0.058) / (17.145 - 0.058)
 	MSI = MSI.clamp(0, 1)
-	NBR = (S2_BANDS[:,:,:,6:7] - S2_BANDS[:,:,:,9:10]) / (S2_BANDS[:,:,:,6:7] + S2_BANDS[:,:,:,9:10]).clamp_min(1e-20)
+	NBR = (S2_BANDS[:, :, :, 6:7] - S2_BANDS[:, :, :, 9:10]) / (
+				S2_BANDS[:, :, :, 6:7] + S2_BANDS[:, :, :, 9:10]).clamp_min(1e-20)
 	NBR = (NBR + 1) / 2
 
 	# lower wave length
-	MCARI = ((S2_BANDS[:,:,:,3:4] - S2_BANDS[:,:,:,2:3]) - 0.2 * (S2_BANDS[:,:,:,3:4] - S2_BANDS[:,:,:,1:2])) * (S2_BANDS[:,:,:,3:4] / S2_BANDS[:,:,:,1:2].clamp_min(1e-20));
-	MCARI = ((MCARI - (-1.03))/(4.606 + 1.03)).clamp(0, 1)
-	GNDVI = (S2_BANDS[:, :, :, 6:7] - S2_BANDS[:, :, :, 1:2]) / (S2_BANDS[:, :, :, 6:7] + S2_BANDS[:, :, :, 1:2]).clamp_min(1e-20)
+	MCARI = ((S2_BANDS[:, :, :, 3:4] - S2_BANDS[:, :, :, 2:3]) - 0.2 * (
+				S2_BANDS[:, :, :, 3:4] - S2_BANDS[:, :, :, 1:2])) * (
+						S2_BANDS[:, :, :, 3:4] / S2_BANDS[:, :, :, 1:2].clamp_min(1e-20));
+	MCARI = ((MCARI - (-1.03)) / (4.606 + 1.03)).clamp(0, 1)
+	GNDVI = (S2_BANDS[:, :, :, 6:7] - S2_BANDS[:, :, :, 1:2]) / (
+				S2_BANDS[:, :, :, 6:7] + S2_BANDS[:, :, :, 1:2]).clamp_min(1e-20)
 	GNDVI = (GNDVI + 1) / 2
 	CHLRED = (S2_BANDS[:, :, :, 3:4] / S2_BANDS[:, :, :, 5:6].clamp_min(1e-20) - 0.058) / (17.149 - 0.058)
 	CHLRED = CHLRED.clamp(0, 1)
@@ -61,15 +69,14 @@ def preprocess_batch(x_b, mean=None, std=None):
 	x_b = torch.cat([
 		S1_BANDS,  # 0 6
 		S2_BANDS,  # 1 10
-		INDICE_BANDS # 2 4, 3, 3
-	 ], dim=-1)
-
-
+		INDICE_BANDS  # 2 4, 3, 3
+	], dim=-1)
 
 	if mean is not None and std is not None:
 		x_b = (x_b - mean[None, None, None, :]) / std[None, None, None, :]
 	# x_b = (x_b - mean[None, :, :, :]) / std[None, :, :, :]
 	return x_b
+
 
 # def to_wh(x_b):
 # 	xx = x_b.view(x_b.shape[0:3] + (4, 4)).transpose(3, 2)
@@ -105,21 +112,8 @@ def data_aug(x_b):
 
 	return x_b
 
-def mixup(x, y, alpha=1.0):
 
-	if alpha > 0:
-		lam = np.random.beta(alpha, alpha)
-	else:
-		lam = 1
-
-	batch_size = x.shape[0]
-	index = torch.randperm(batch_size).cuda()
-
-	mixed_x = lam * x + (1 - lam) * x[index, :]
-	y_a, y_b = y, y[index]
-	return mixed_x, y_a, y_b, lam
-
-def prepare_batch(x_b, y_b, f_idx=None, mean=None, std=None, aug=False, mix=False):
+def prepare_batch(x_b, y_b, f_idx=None, mean=None, std=None, aug=False):
 	# x_b = (x_b - mean[None, None, None, :]) / std[None, None, None, :]
 	# x_b = (x_b - mean[None, :, :, :]) / std[None, :, :, :]
 	if mean is not None and std is not None:
@@ -132,18 +126,28 @@ def prepare_batch(x_b, y_b, f_idx=None, mean=None, std=None, aug=False, mix=Fals
 
 	x_b = preprocess_batch(x_b, mean, std)
 
-	# if mode == 'wh':
-	# 	x_b = to_wh(x_b)
-
 	if y_b is not None:
-		# y_b = torch.from_numpy(y_b).max(-1)[1].cuda()
-		y_b = torch.from_numpy(y_b).cuda()
+		y_b = torch.from_numpy(y_b).float().cuda()
 
-		if mix:
-			x_b, y_1, y_2, lam = mixup(x_b, y_b)
-			# y_b = lam * y_1 + (1 - lam) * y_2
-			return x_b, (y_1, y_2, lam)
 	return x_b[:, :, :, :], y_b
+
+
+def mixup_data(x, y, alpha=1.0):
+	if alpha > 0:
+		lam = np.random.beta(alpha, alpha)
+	else:
+		lam = 1
+
+	batch_size = x.shape[0]
+	index = torch.randperm(batch_size).cuda()
+
+	mixed_x = lam * x + (1 - lam) * x[index, :]
+	y_a, y_b = y, y[index]
+	return mixed_x, y_a, y_b, lam
+
+
+def mixup_criterion(criterion, pred, y_a, y_b, lam):
+	return lam * criterion(pred, y_a) + (1 - lam) * criterion(pred, y_b)
 
 
 if __name__ == '__main__':

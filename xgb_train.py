@@ -101,10 +101,10 @@ if __name__ == '__main__':
 			'eval_metric': 'merror',
 			'num_class': 17,  # 类别数，与 multisoftmax 并用
 			'gamma': 2,  # 用于控制是否后剪枝的参数,越大越保守，一般0.1、0.2这样子。
-			'max_depth': 3,  # 构建树的深度，越大越容易过拟合
+			'max_depth': 4,  # 构建树的深度，越大越容易过拟合
 			'n_estimators': 15,
-			'lambda': 5,  # L2
-			'alpha': 5, # L1
+			'lambda': 8,  # L2
+			'alpha': 8, # L1
 			'subsample': 0.5,  # 随机采样训练样本
 			'colsample_by*': 0.5,  # 生成树时进行的列采样
 			'min_child_weight': 5,
