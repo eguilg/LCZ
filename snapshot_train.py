@@ -16,18 +16,23 @@ from modules.scheduler import RestartCosineAnnealingLR, CosineAnnealingLR
 
 from modules.losses import FocalCE
 
-SEED = 502
+
 T = 1.5
 M = 6
-EPOCH = int(math.ceil(T * M))
-BATCH_SIZE = 64
 LR = 1e-4
-DECAY = 3e-2
+DECAY = 2e-2
 USE_CLASS_WEIGHT = False
-MIX_UP = False
-FOCAL = True
+MIX_UP = True
+FOCAL = False
+FINE_TUNE = False
+
+EPOCH = int(math.ceil(T * M))
+SEED = 502
+BATCH_SIZE = 64
 MIX_UP_ALPHA = 1.0
 N_CHANNEL = 26
+
+
 
 MODEL = 'GAC'
 # MODEL = 'DENSE'
@@ -43,6 +48,11 @@ mean_std_file_val = '/home/zydq/Datasets/LCZ/mean_std_f_val.h5'
 
 name_arg = [MODEL, 'mixup' + str(int(MIX_UP)), 'foc' + str(int(FOCAL)), 'weight' + str(int(USE_CLASS_WEIGHT)),
 			'decay' + str(DECAY)]
+
+# extra_name = ['onval']
+extra_name = []
+
+name_arg += extra_name
 model_name = '_'.join(name_arg)
 model_dir = './checkpoints/' + model_name
 
@@ -88,9 +98,9 @@ if __name__ == '__main__':
 	# val_loader = MyDataLoader(val_source.h5fids, val_source.indices)
 
 	# 只用val
-	# data_source = H5DataSource([val_file], BATCH_SIZE, split=0.1, seed=SEED)
-	# train_loader = MyDataLoader(data_source.h5fids, data_source.train_indices)
-	# val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
+	data_source = H5DataSource([val_file], BATCH_SIZE, split=0.1, seed=SEED)
+	train_loader = MyDataLoader(data_source.h5fids, data_source.train_indices)
+	val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
 
 	# 合并再划分 val 中 1:2
 	# data_source = H5DataSource([train_file, val_file], BATCH_SIZE, [0.02282, 2 / 3], seed=SEED)
@@ -103,9 +113,9 @@ if __name__ == '__main__':
 	# val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
 
 	# train val 固定比例
-	data_source = SampledDataSorce([train_file, val_file], BATCH_SIZE, sample_rate=[0.5, 0.5], seed=SEED)
-	train_loader = MyDataLoader(data_source.h5fids, data_source.train_indices)
-	val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
+	# data_source = SampledDataSorce([train_file, val_file], BATCH_SIZE, sample_rate=[0.5, 0.5], seed=SEED)
+	# train_loader = MyDataLoader(data_source.h5fids, data_source.train_indices)
+	# val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
 
 	class_weights = torch.from_numpy(data_source.class_weights).float().cuda()
 	node_class_weights = torch.from_numpy(data_source.node_class_weights).float().cuda()
@@ -161,8 +171,8 @@ if __name__ == '__main__':
 		print('load training param, ', cur_model_path)
 		state = torch.load(cur_model_path)
 		model.load_state_dict(state['model_state'])
-		optimizer.load_state_dict(state['opt_state'])
-		if 'lr_scheduler_state' in state:
+		if not FINE_TUNE:
+			optimizer.load_state_dict(state['opt_state'])
 			lr_scheduler.load_state_dict(state['lr_scheduler_state'])
 			lr_scheduler.optimizer = optimizer
 			global_step = lr_scheduler.last_epoch + 1
