@@ -32,8 +32,6 @@ MODEL = 'GAC'
 
 
 model_dir = './checkpoints/model_93071'  # GACNet cosine GP  L2 3e-2 trained on train val 1:1  0.9046 A0.852/0.8729 A0.833
-model_dir = './checkpoints/model_12224'  # GACNet cosine GP  L2 1e-2 trained on train val 1:1  0.9453 A0.807
-model_dir = './checkpoints/model_10774'  # GACNet cosine GP  L2 1.5e-2 MIXUP trained on train val 1:1  0.89417 A0.809
 model_dir = './checkpoints/model_83173'  # GACNet cosine GP  L2 1e-2 MIXUP trained on train val 1:1  0.9163 A0.837
 model_dir = './checkpoints/model_79740'  # GACNet cosine GP  L2 1.5e-2 FOCAL trained on train val 1:1 0.9307
 

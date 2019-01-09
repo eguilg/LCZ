@@ -25,6 +25,8 @@ mean_std_file = '/home/zydq/Datasets/LCZ/mean_std_f_test.h5'
 
 model_name = 'GAC_mixup0_foc1_weight0_decay0.03'
 # model_name = 'GAC_mixup0_foc1_weight0_decay0.03_onval'
+model_name = 'GAC_mixup1_foc0_weight0_decay0.02_onval'
+model_name = 'GAC_mixup1_foc0_weight0_decay0.02'
 
 model_dir = os.path.join('./checkpoints/', model_name)
 MODEL = model_name.split('_')[0]

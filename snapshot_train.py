@@ -20,10 +20,10 @@ from modules.losses import FocalCE
 T = 1.5
 M = 6
 LR = 1e-4
-DECAY = 2e-2
+DECAY = 1.5e-2
 USE_CLASS_WEIGHT = False
-MIX_UP = True
-FOCAL = False
+MIX_UP = False
+FOCAL = True
 FINE_TUNE = False
 
 EPOCH = int(math.ceil(T * M))
@@ -34,9 +34,9 @@ N_CHANNEL = 26
 
 
 
-MODEL = 'GAC'
+# MODEL = 'GAC'
 # MODEL = 'DENSE'
-# MODEL = 'RES'
+MODEL = 'RES'
 # MODEL = 'LCZ'
 
 
@@ -98,9 +98,9 @@ if __name__ == '__main__':
 	# val_loader = MyDataLoader(val_source.h5fids, val_source.indices)
 
 	# 只用val
-	data_source = H5DataSource([val_file], BATCH_SIZE, split=0.1, seed=SEED)
-	train_loader = MyDataLoader(data_source.h5fids, data_source.train_indices)
-	val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
+	# data_source = H5DataSource([val_file], BATCH_SIZE, split=0.1, seed=SEED)
+	# train_loader = MyDataLoader(data_source.h5fids, data_source.train_indices)
+	# val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
 
 	# 合并再划分 val 中 1:2
 	# data_source = H5DataSource([train_file, val_file], BATCH_SIZE, [0.02282, 2 / 3], seed=SEED)
@@ -113,9 +113,9 @@ if __name__ == '__main__':
 	# val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
 
 	# train val 固定比例
-	# data_source = SampledDataSorce([train_file, val_file], BATCH_SIZE, sample_rate=[0.5, 0.5], seed=SEED)
-	# train_loader = MyDataLoader(data_source.h5fids, data_source.train_indices)
-	# val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
+	data_source = SampledDataSorce([train_file, val_file], BATCH_SIZE, sample_rate=[0.5, 0.5], seed=SEED)
+	train_loader = MyDataLoader(data_source.h5fids, data_source.train_indices)
+	val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
 
 	class_weights = torch.from_numpy(data_source.class_weights).float().cuda()
 	node_class_weights = torch.from_numpy(data_source.node_class_weights).float().cuda()
