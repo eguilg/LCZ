@@ -7,6 +7,7 @@ import numpy as np
 from dataloader import MyDataLoader, H5DataSource
 from preprocess import prepare_batch
 from modules.gac_net import GACNet
+from modules.lcz_xception import Xception
 from modules.lcz_res_net import resnet18, resnet34, resnet50
 from modules.lcz_dense_net import densenet121, densenet169, densenet201, densenet161
 
@@ -26,8 +27,10 @@ if TEST_B:
 mean_std_file = '/home/zydq/Datasets/LCZ/mean_std_f_test.h5'
 
 MODEL = 'GAC'
-# MODEL = 'DENSE'
 # MODEL = 'RES'
+# MODEL = 'XCEPTION'
+# MODEL = 'DENSE'
+
 # MODEL = 'LCZ'
 
 
@@ -62,6 +65,8 @@ if __name__ == '__main__':
 					   3, 3, 2, 2,
 					   4, 3, 3]
 		model = GACNet(group_sizes, 17, 32)
+	elif MODEL == 'XCEPTION':
+		model = Xception(N_CHANNEL, 17)
 	elif MODEL == 'RES':
 		model = resnet50(N_CHANNEL, 17)
 	elif MODEL == 'DENSE':

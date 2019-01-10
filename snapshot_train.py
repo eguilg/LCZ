@@ -11,11 +11,10 @@ from preprocess import prepare_batch, mixup_data, mixup_criterion
 from modules.gac_net import GACNet
 from modules.lcz_res_net import resnet18, resnet34, resnet50, resnet101
 from modules.lcz_dense_net import densenet121, densenet169, densenet201, densenet161
-
+from modules.lcz_xception import Xception
 from modules.scheduler import RestartCosineAnnealingLR, CosineAnnealingLR
 
 from modules.losses import FocalCE
-
 
 T = 1.5
 M = 6
@@ -32,13 +31,12 @@ BATCH_SIZE = 64
 MIX_UP_ALPHA = 1.0
 N_CHANNEL = 26
 
-
-
-# MODEL = 'GAC'
+MODEL = 'GAC'
+# MODEL = 'RES'
+# MODEL = 'XCEPTION'
 # MODEL = 'DENSE'
-MODEL = 'RES'
-# MODEL = 'LCZ'
 
+# MODEL = 'LCZ'
 
 train_file = '/home/zydq/Datasets/LCZ/training.h5'
 val_file = '/home/zydq/Datasets/LCZ/validation.h5'
@@ -131,6 +129,8 @@ if __name__ == '__main__':
 					   3, 3, 2, 2,
 					   4, 3, 3]
 		model = GACNet(group_sizes, 17, 32)
+	elif MODEL == 'XCEPTION':
+		model = Xception(N_CHANNEL, 17)
 	elif MODEL == 'RES':
 		model = resnet50(N_CHANNEL, 17)
 	elif MODEL == 'DENSE':
