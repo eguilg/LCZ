@@ -7,11 +7,11 @@ import numpy as np
 from dataloader import MyDataLoader, H5DataSource
 from preprocess import prepare_batch
 from modules.gac_net import GACNet
-from modules.lcz_res_net import resnet18, resnet34, resnet50
+from modules.lcz_res_net import resnet10, resnet18, resnet34, resnet50
 from modules.lcz_xception import Xception
 from modules.lcz_dense_net import densenet121, densenet169, densenet201, densenet161
 
-BATCH_SIZE = 32
+BATCH_SIZE = 100
 N_CHANNEL = 26
 TEST_B = True
 
@@ -24,16 +24,18 @@ if TEST_B:
 	score_dir = './score_B/'
 mean_std_file = '/home/zydq/Datasets/LCZ/mean_std_f_test.h5'
 
-model_name = 'GAC_mixup0_foc1_weight0_decay0.03'
-# model_name = 'GAC_mixup0_foc1_weight0_decay0.03_onval'
-model_name = 'GAC_mixup1_foc0_weight0_decay0.02_onval'
-model_name = 'GAC_mixup1_foc0_weight0_decay0.02'
+model_name = 'GAC_mixup0_foc1_weight0_decay0.01'
+model_name = 'RES10_mixup0_foc1_weight0_decay0.01'
+model_name = 'RES18_mixup0_foc1_weight0_decay0.01'
+model_name = 'DENSE121_mixup0_foc1_weight0_decay0.01'
+# model_name = 'DENSE201_mixup0_foc1_weight0_decay0.01'
+# model_name = 'XCEPTION_mixup0_foc1_weight0_decay0.01'
 
 model_dir = os.path.join('./checkpoints/', model_name)
 MODEL = model_name.split('_')[0]
 
 models = [
-	# 'M_curr.ckpt',
+	'M_curr.ckpt',
 	'M_best.ckpt',
 	'M_1.ckpt',
 	'M_2.ckpt',
@@ -65,9 +67,13 @@ if __name__ == '__main__':
 		model = GACNet(group_sizes, 17, 32)
 	elif MODEL == 'XCEPTION':
 		model = Xception(N_CHANNEL, 17)
-	elif MODEL == 'RES':
-		model = resnet50(N_CHANNEL, 17)
-	elif MODEL == 'DENSE':
+	elif MODEL == 'RES10':
+		model = resnet10(N_CHANNEL, 17)
+	elif MODEL == 'RES18':
+		model = resnet18(N_CHANNEL, 17)
+	elif MODEL == 'DENSE121':
+		model = densenet121(N_CHANNEL, 17, drop_rate=0.3)
+	elif MODEL == 'DENSE201':
 		model = densenet201(N_CHANNEL, 17, drop_rate=0.3)
 	else:
 		group_sizes = [3, 3,

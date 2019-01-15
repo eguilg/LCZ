@@ -10,7 +10,7 @@ from dataloader import MyDataLoader, H5DataSource, SampledDataSorce
 from preprocess import prepare_batch, mixup_data, mixup_criterion
 from modules.gac_net import GACNet
 from modules.lcz_xception import Xception
-from modules.lcz_res_net import resnet18, resnet34, resnet50, resnet101
+from modules.lcz_res_net import resnet10, resnet18, resnet34, resnet50, resnet101
 from modules.lcz_dense_net import densenet121, densenet169, densenet201, densenet161
 
 from modules.scheduler import RestartCosineAnnealingLR, CosineAnnealingLR
@@ -23,19 +23,20 @@ M = 6
 EPOCH = math.ceil(T * M)
 BATCH_SIZE = 64
 LR = 1e-4
-DECAY = 1.5e-2
+DECAY = 1e-2
 USE_CLASS_WEIGHT = False
 MIX_UP = False
 FOCAL = True
 MIX_UP_ALPHA = 1.0
 N_CHANNEL = 26
 
-MODEL = 'GAC'
-# MODEL = 'RES'
+# MODEL = 'GAC'
+MODEL = 'RES10'
+# MODEL = 'RES18'
+# MODEL = 'DENSE121'
+# MODEL = 'DENSE201'
 # MODEL = 'XCEPTION'
-# MODEL = 'DENSE'
 
-# MODEL = 'LCZ'
 
 
 train_file = '/home/zydq/Datasets/LCZ/training.h5'
@@ -121,9 +122,13 @@ if __name__ == '__main__':
 		model = GACNet(group_sizes, 17, 32)
 	elif MODEL == 'XCEPTION':
 		model = Xception(N_CHANNEL, 17)
-	elif MODEL == 'RES':
-		model = resnet50(N_CHANNEL, 17)
-	elif MODEL == 'DENSE':
+	elif MODEL == 'RES10':
+		model = resnet10(N_CHANNEL, 17)
+	elif MODEL == 'RES18':
+		model = resnet18(N_CHANNEL, 17)
+	elif MODEL == 'DENSE121':
+		model = densenet121(N_CHANNEL, 17, drop_rate=0.3)
+	elif MODEL == 'DENSE201':
 		model = densenet201(N_CHANNEL, 17, drop_rate=0.3)
 	else:
 		group_sizes = [3, 3,

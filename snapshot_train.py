@@ -9,7 +9,7 @@ import numpy as np
 from dataloader import MyDataLoader, H5DataSource, SampledDataSorce
 from preprocess import prepare_batch, mixup_data, mixup_criterion
 from modules.gac_net import GACNet
-from modules.lcz_res_net import resnet18, resnet34, resnet50, resnet101
+from modules.lcz_res_net import resnet10, resnet18, resnet34, resnet50, resnet101
 from modules.lcz_dense_net import densenet121, densenet169, densenet201, densenet161
 from modules.lcz_xception import Xception
 from modules.scheduler import RestartCosineAnnealingLR, CosineAnnealingLR
@@ -17,26 +17,30 @@ from modules.scheduler import RestartCosineAnnealingLR, CosineAnnealingLR
 from modules.losses import FocalCE
 
 T = 1.5
-M = 6
+ROUND = 6
+EPOCH = int(T * ROUND)
+N_SNAPSHOT = 6
 LR = 1e-4
-DECAY = 1.5e-2
+DECAY = 1e-2
+
 USE_CLASS_WEIGHT = False
 MIX_UP = False
 FOCAL = True
 FINE_TUNE = False
 
-EPOCH = int(math.ceil(T * M))
+
 SEED = 502
 BATCH_SIZE = 64
 MIX_UP_ALPHA = 1.0
 N_CHANNEL = 26
 
-MODEL = 'GAC'
-# MODEL = 'RES'
+# MODEL = 'GAC'
+# MODEL = 'RES10'
+# MODEL = 'RES18'
+# MODEL = 'DENSE121'
+MODEL = 'DENSE201'
 # MODEL = 'XCEPTION'
-# MODEL = 'DENSE'
 
-# MODEL = 'LCZ'
 
 train_file = '/home/zydq/Datasets/LCZ/training.h5'
 val_file = '/home/zydq/Datasets/LCZ/validation.h5'
@@ -61,6 +65,22 @@ if not os.path.isdir(model_dir):
 
 cur_model_path = os.path.join(model_dir, 'M_curr.ckpt')
 best_model_path = os.path.join(model_dir, 'M_best.ckpt')
+
+def update_snapshot(state, snapshot_losses, prefix='M'):
+	if len(snapshot_losses) < N_SNAPSHOT:
+		snapshot_losses.append(state['loss'])
+		idx = len(snapshot_losses)
+	else:
+		idx = np.argmax(snapshot_losses) + 1
+		if snapshot_losses[idx - 1] >= state['loss']:
+			snapshot_losses[idx - 1] = state['loss']
+		else:
+			idx = -1
+
+	if idx != -1:
+		M_path = os.path.join(model_dir, '_'.join([prefix, str(idx)]) + '.ckpt')
+		torch.save(state, M_path)
+		print('saved snapshot to', M_path)
 
 if __name__ == '__main__':
 
@@ -131,9 +151,13 @@ if __name__ == '__main__':
 		model = GACNet(group_sizes, 17, 32)
 	elif MODEL == 'XCEPTION':
 		model = Xception(N_CHANNEL, 17)
-	elif MODEL == 'RES':
-		model = resnet50(N_CHANNEL, 17)
-	elif MODEL == 'DENSE':
+	elif MODEL == 'RES10':
+		model = resnet10(N_CHANNEL, 17)
+	elif MODEL == 'RES18':
+		model = resnet18(N_CHANNEL, 17)
+	elif MODEL == 'DENSE121':
+		model = densenet121(N_CHANNEL, 17, drop_rate=0.3)
+	elif MODEL == 'DENSE201':
 		model = densenet201(N_CHANNEL, 17, drop_rate=0.3)
 	else:
 		group_sizes = [3, 3,
@@ -156,16 +180,27 @@ if __name__ == '__main__':
 	else:
 		criteria = crit().cuda()
 	optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=DECAY)
-	lr_scheduler = RestartCosineAnnealingLR(optimizer, T_max=int(T * len(train_loader)), eta_min=1e-7)
+	lr_scheduler = RestartCosineAnnealingLR(optimizer, T_max=int(T * len(train_loader)), eta_min=0)
+
+	snapshot_losses = []
+	for i in range(1, N_SNAPSHOT + 1):
+		snapshot_path = os.path.join(model_dir, '_'.join(['M', str(i)]) + '.ckpt')
+		if os.path.isfile(snapshot_path):
+			snapshot_states = torch.load(snapshot_path)
+			snapshot_losses.append(snapshot_states['loss'])
+			del snapshot_states
+	print(snapshot_losses)
 
 	if os.path.isfile(best_model_path):
 		print('load training param, ', best_model_path)
 		best_state = torch.load(best_model_path)
 		best_acc = best_state['score']
+		best_loss = best_state['loss']
 		print('best acc', best_acc)
+		print('best_loss', best_loss)
 		del best_state
 	else:
-		best_acc = 0
+		best_loss = np.inf
 
 	if os.path.isfile(cur_model_path):
 		print('load training param, ', cur_model_path)
@@ -246,7 +281,7 @@ if __name__ == '__main__':
 					train_hit = 0
 					train_sample = 0
 
-				if global_step - last_val_step == val_every or global_step % lr_scheduler.T_max == 0:
+				if global_step - last_val_step == val_every or (global_step % lr_scheduler.T_max) == 0:
 					print('-' * 80)
 					print('Evaluating...')
 					last_val_step = global_step
@@ -288,19 +323,17 @@ if __name__ == '__main__':
 					state['score'] = val_hit / val_sample
 
 					torch.save(state, cur_model_path)
+
 					print('saved curr model to', cur_model_path)
 
-					if global_step % lr_scheduler.T_max == 0:
-						M_name = '_'.join(['M', str(global_step // lr_scheduler.T_max)]) + '.ckpt'
-						M_path = os.path.join(model_dir, M_name)
-						torch.save(state, M_path)
-						print('saved snapshot model to', M_path)
-
-					elif best_acc <= state['score']:
+					if best_loss >= state['loss']:
+						if os.path.isfile(best_model_path):
+							last_best_state = torch.load(best_model_path)
+							update_snapshot(last_best_state, snapshot_losses, prefix='M')
 						torch.save(state, best_model_path)
 						print('saved best model to', best_model_path)
+						best_loss = state['loss']
+					else:
+						update_snapshot(state, snapshot_losses)
 
-					if best_acc <= state['score']:
-						best_acc = state['score']
-
-					print('curr best acc:', best_acc)
+					print('curr best loss:', best_loss)

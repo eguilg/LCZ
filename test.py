@@ -8,7 +8,7 @@ from dataloader import MyDataLoader, H5DataSource
 from preprocess import prepare_batch
 from modules.gac_net import GACNet
 from modules.lcz_xception import Xception
-from modules.lcz_res_net import resnet18, resnet34, resnet50
+from modules.lcz_res_net import resnet10, resnet18, resnet34, resnet50
 from modules.lcz_dense_net import densenet121, densenet169, densenet201, densenet161
 
 import torchvision.models as models
@@ -26,13 +26,12 @@ if TEST_B:
 	score_dir = './score_B/'
 mean_std_file = '/home/zydq/Datasets/LCZ/mean_std_f_test.h5'
 
-MODEL = 'GAC'
-# MODEL = 'RES'
+# MODEL = 'GAC'
+MODEL = 'RES10'
+# MODEL = 'RES18'
+# MODEL = 'DENSE121'
+# MODEL = 'DENSE201'
 # MODEL = 'XCEPTION'
-# MODEL = 'DENSE'
-
-# MODEL = 'LCZ'
-
 
 model_dir = './checkpoints/model_93071'  # GACNet cosine GP  L2 3e-2 trained on train val 1:1  0.9046 A0.852/0.8729 A0.833
 model_dir = './checkpoints/model_83173'  # GACNet cosine GP  L2 1e-2 MIXUP trained on train val 1:1  0.9163 A0.837
@@ -67,9 +66,13 @@ if __name__ == '__main__':
 		model = GACNet(group_sizes, 17, 32)
 	elif MODEL == 'XCEPTION':
 		model = Xception(N_CHANNEL, 17)
-	elif MODEL == 'RES':
-		model = resnet50(N_CHANNEL, 17)
-	elif MODEL == 'DENSE':
+	elif MODEL == 'RES10':
+		model = resnet10(N_CHANNEL, 17)
+	elif MODEL == 'RES18':
+		model = resnet18(N_CHANNEL, 17)
+	elif MODEL == 'DENSE121':
+		model = densenet121(N_CHANNEL, 17, drop_rate=0.3)
+	elif MODEL == 'DENSE201':
 		model = densenet201(N_CHANNEL, 17, drop_rate=0.3)
 	else:
 		group_sizes = [3, 3,
