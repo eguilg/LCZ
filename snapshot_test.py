@@ -25,9 +25,9 @@ if TEST_B:
 mean_std_file = '/home/zydq/Datasets/LCZ/mean_std_f_test.h5'
 
 model_name = 'GAC_mixup0_foc1_weight0_decay0.01'
-model_name = 'RES10_mixup0_foc1_weight0_decay0.01'
-model_name = 'RES18_mixup0_foc1_weight0_decay0.01'
-model_name = 'DENSE121_mixup0_foc1_weight0_decay0.01'
+# model_name = 'RES10_mixup0_foc1_weight0_decay0.01'
+# model_name = 'RES18_mixup0_foc1_weight0_decay0.01'
+# model_name = 'DENSE121_mixup0_foc1_weight0_decay0.01'
 # model_name = 'DENSE201_mixup0_foc1_weight0_decay0.01'
 # model_name = 'XCEPTION_mixup0_foc1_weight0_decay0.01'
 
