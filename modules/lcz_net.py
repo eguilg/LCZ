@@ -66,7 +66,7 @@ class LCZNet(nn.Module):
 		self.channel = channel
 
 	def forward(self, x):
-		x = x.transpose(2, 3).transpose(1, 2)
+		# x = x.transpose(2, 3).transpose(1, 2)
 		f = self.cbam1(self.conv1(x))  # b base 16 16
 		f = self.cbam2(self.conv2(f))  # b 2base 8 8
 		f = self.cbam3(self.conv3(f))  # b 4base 4 4

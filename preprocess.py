@@ -125,7 +125,7 @@ def prepare_batch(x_b, y_b, f_idx=None, mean=None, std=None, aug=False):
 	x_b = torch.from_numpy(x_b).float().cuda()
 
 	x_b = preprocess_batch(x_b, mean, std)
-
+	x_b = x_b.transpose(2, 3).transpose(1, 2)  # bs nc w h
 	if y_b is not None:
 		y_b = torch.from_numpy(y_b).float().cuda()
 

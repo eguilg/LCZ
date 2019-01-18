@@ -75,7 +75,7 @@ class GACNet(nn.Module):
 
 	def forward(self, x):
 
-		x = x.transpose(2, 3).transpose(1, 2)  # b channel s s
+		# x = x.transpose(2, 3).transpose(1, 2)  # b channel s s
 
 		cur_c = 0
 		out = []

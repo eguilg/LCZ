@@ -147,7 +147,7 @@ class LCZDenseNet(nn.Module):
 				m.bias.data.zero_()
 
 	def forward(self, x):
-		x = x.transpose(2, 3).transpose(1, 2)  # b channel s s
+		# x = x.transpose(2, 3).transpose(1, 2)  # b channel s s
 		features = self.features(x)
 		out = F.relu(features, inplace=True)
 		# out = F.avg_pool2d(out, kernel_size=4, stride=1).view(features.size(0), -1)

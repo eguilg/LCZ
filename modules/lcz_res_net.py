@@ -132,7 +132,7 @@ class LCZResNet(nn.Module):
 		return nn.Sequential(*layers)
 
 	def forward(self, x):
-		x = x.transpose(2, 3).transpose(1, 2)  # b channel s s
+		# x = x.transpose(2, 3).transpose(1, 2)  # b channel s s
 
 		x = self.conv1(x)
 		x = self.bn1(x)
