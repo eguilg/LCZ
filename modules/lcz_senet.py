@@ -327,28 +327,9 @@ class SENet(nn.Module):
 		v = self.global_avgpool(f)
 		v = v.view(v.size(0), -1)
 
-		if self.fc is not None:
-			v = self.fc(v)
-
-		if not self.training:
-			return v
-
 		y = self.classifier(v)
 
 		return y
-
-
-def init_pretrained_weights(model, model_url):
-	"""
-	Initialize model with pretrained weights.
-	Layers that don't match with pretrained layers in name or size are kept unchanged.
-	"""
-	pretrain_dict = model_zoo.load_url(model_url)
-	model_dict = model.state_dict()
-	pretrain_dict = {k: v for k, v in pretrain_dict.items() if k in model_dict and model_dict[k].size() == v.size()}
-	model_dict.update(pretrain_dict)
-	model.load_state_dict(model_dict)
-	print("Initialized model with pretrained weights from {}".format(model_url))
 
 
 def se_resnet10_fc512(in_channel, num_classes, **kwargs):
