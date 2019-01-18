@@ -326,7 +326,7 @@ class SENet(nn.Module):
 		f = self.featuremaps(x)
 		v = self.global_avgpool(f)
 		v = v.view(v.size(0), -1)
-
+		v = self.fc(v)
 		y = self.classifier(v)
 
 		return y
