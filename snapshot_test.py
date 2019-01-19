@@ -8,7 +8,7 @@ from dataloader import MyDataLoader, H5DataSource
 from preprocess import prepare_batch
 from modules.gac_net import GACNet
 from modules.lcz_res_net import resnet10, resnet18, resnet34, resnet50
-from modules.lcz_senet import se_resnet10_fc512, se_resnet50_fc512
+from modules.lcz_senet import se_resnet10_fc512, se_resnet15_fc512
 from modules.lcz_xception import Xception
 from modules.lcz_dense_net import densenet121, densenet169, densenet201, densenet161
 
@@ -28,6 +28,8 @@ mean_std_file = '/home/zydq/Datasets/LCZ/mean_std_f_test.h5'
 model_name = 'GAC_mixup0_foc1_weight0_decay0.01'
 # model_name = 'RES10_mixup0_foc1_weight0_decay0.01'
 # model_name = 'RES18_mixup0_foc1_weight0_decay0.01'
+# model_name = 'SE-RES10_mixup0_foc1_weight0_decay0.01'
+# model_name = 'SE-RES15_mixup0_foc1_weight0_decay0.01'
 # model_name = 'DENSE121_mixup0_foc1_weight0_decay0.01'
 # model_name = 'DENSE201_mixup0_foc1_weight0_decay0.01'
 # model_name = 'XCEPTION_mixup0_foc1_weight0_decay0.01'
@@ -74,8 +76,8 @@ if __name__ == '__main__':
 		model = resnet18(N_CHANNEL, 17)
 	elif MODEL == 'SE-RES10':
 		model = se_resnet10_fc512(N_CHANNEL, 17)
-	elif MODEL == 'SE-RES50':
-		model = se_resnet50_fc512(N_CHANNEL, 17)
+	elif MODEL == 'SE-RES15':
+		model = se_resnet15_fc512(N_CHANNEL, 17)
 	elif MODEL == 'DENSE121':
 		model = densenet121(N_CHANNEL, 17, drop_rate=0.3)
 	elif MODEL == 'DENSE201':

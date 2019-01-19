@@ -14,7 +14,7 @@ import torchvision
 Code imported from https://github.com/Cadene/pretrained-models.pytorch
 """
 
-__all__ = ['se_resnet50_fc512']
+__all__ = ['se_resnet10_fc512', 'se_resnet15_fc512']
 
 
 class SEModule(nn.Module):
@@ -353,12 +353,12 @@ def se_resnet10_fc512(in_channel, num_classes, **kwargs):
 	return model
 
 
-def se_resnet50_fc512(in_channel, num_classes, **kwargs):
+def se_resnet15_fc512(in_channel, num_classes, **kwargs):
 	model = SENet(
 		in_channel=in_channel,
 		num_classes=num_classes,
 		block=SEResNetBottleneck,
-		layers=[3, 4, 6, 3],
+		layers=[1, 2, 2, 1],
 		groups=1,
 		reduction=16,
 		dropout_p=None,
