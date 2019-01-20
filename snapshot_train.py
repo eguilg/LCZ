@@ -15,7 +15,7 @@ from modules.lcz_xception import Xception
 from modules.lcz_senet import se_resnet10_fc512, se_resnet15_fc512
 from modules.scheduler import RestartCosineAnnealingLR, CosineAnnealingLR
 
-from modules.losses import FocalCE
+from modules.losses import FocalCE, GHMC_Loss
 
 T = 1.5
 ROUND = 6
@@ -26,7 +26,8 @@ DECAY = 1e-2
 
 USE_CLASS_WEIGHT = False
 MIX_UP = False
-FOCAL = True
+FOCAL = False
+GHM = True
 FINE_TUNE = False
 
 
@@ -35,8 +36,8 @@ BATCH_SIZE = 64
 MIX_UP_ALPHA = 1.0
 N_CHANNEL = 26
 
-MODEL = 'GAC'
-# MODEL = 'RES10'
+# MODEL = 'GAC'
+MODEL = 'RES10'
 # MODEL = 'RES18'
 # MODEL = 'SE-RES10'
 # MODEL = 'SE-RES15'
@@ -179,6 +180,8 @@ if __name__ == '__main__':
 	print('num_params: %d' % (model_param_num))
 	if FOCAL:
 		crit = FocalCE
+	elif GHM:
+		crit = GHMC_Loss
 	else:
 		crit = nn.CrossEntropyLoss
 
@@ -251,7 +254,7 @@ if __name__ == '__main__':
 					train_out = model(train_input)
 					loss = mixup_criterion(criteria, train_out, y_1.max(-1)[1], y_2.max(-1)[1], lam)
 					train_target = lam * y_1 + (1 - lam) * y_2
-				elif FOCAL:
+				elif FOCAL or GHM:
 					train_out = model(train_input)
 					loss = criteria(train_out, train_target)
 				else:
@@ -301,7 +304,7 @@ if __name__ == '__main__':
 						for val_data, val_label, f_idx_val in val_loader:
 							val_input, val_target = prepare_batch(val_data, val_label, f_idx_val, mean, std)
 							val_out = model(val_input)
-							if FOCAL:
+							if FOCAL or GHM:
 								val_loss_total += criteria(train_out, train_target).item()
 							else:
 								val_loss_total += criteria(val_out, val_target.max(-1)[1]).item()

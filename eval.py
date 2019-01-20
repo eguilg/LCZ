@@ -24,10 +24,10 @@ mean_std_file_train = '/home/zydq/Datasets/LCZ/mean_std_f_train.h5'
 mean_std_file_val = '/home/zydq/Datasets/LCZ/mean_std_f_val.h5'
 
 # MODEL = 'GAC'
-# MODEL = 'RES10'
+MODEL = 'RES10'
 # MODEL = 'RES18'
 # MODEL = 'SE-RES10'
-MODEL = 'SE-RES15'
+# MODEL = 'SE-RES15'
 # MODEL = 'DENSE121'
 # MODEL = 'DENSE201'
 # MODEL = 'XCEPTION'
@@ -44,7 +44,10 @@ model_dir = './checkpoints/GAC_mixup0_foc1_weight0_decay0.01'
 # model_dir = './checkpoints/DENSE121_mixup0_foc1_weight0_decay0.01'
 # model_dir = './checkpoints/DENSE201_mixup0_foc1_weight0_decay0.01'
 # model_dir = './checkpoints/XCEPTION_mixup0_foc1_weight0_decay0.01'
-cur_model_path = os.path.join(model_dir, 'M_best.ckpt')
+
+model_dir = './checkpoints/RES10_mixup0_foc0_weight0_decay0.01'
+
+cur_model_path = os.path.join(model_dir, 'M_6.ckpt')
 # cur_model_path = os.path.join(model_dir, 'state_curr.ckpt')
 
 if not os.path.isdir('./evaluate/'):
