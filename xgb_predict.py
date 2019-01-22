@@ -5,15 +5,15 @@ import os
 
 # dense_train_file = '/home/zydq/Datasets/LCZ/dense_f_train.csv'
 # dense_val_file = '/home/zydq/Datasets/LCZ/dense_f_val.csv'
-TEST_B = True
+TEST_B = False
 
-dense_test_file = '/home/zydq/Datasets/LCZ/dense_f_test.csv'
-submit_dir = './submit/'
-score_dir = './score/'
+dense_test_file = '/home/zydq/Datasets/LCZ/dense_f_test2A.csv'
+submit_dir = './submit2_A/'
+score_dir = './score2_A/'
 if TEST_B:
-	dense_test_file = '/home/zydq/Datasets/LCZ/dense_f_testB.csv'
-	submit_dir = './submit_B/'
-	score_dir = './score_B/'
+	dense_test_file = '/home/zydq/Datasets/LCZ/dense_f_test2B.csv'
+	submit_dir = './submit2_B/'
+	score_dir = './score2_B/'
 
 
 if not os.path.isdir(submit_dir):

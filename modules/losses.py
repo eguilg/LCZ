@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn.modules.loss import _WeightedLoss
+from torch.nn.modules.loss import _WeightedLoss, _Loss
 
 
 class FocalCE(_WeightedLoss):
@@ -27,9 +27,63 @@ class FocalCE(_WeightedLoss):
 		return focal_loss
 
 
-class GHMC_Loss(nn.Module):
-	def __init__(self, bins=10, momentum=0.9):
+class GHMC_Loss(_Loss):
+	def __init__(self, num_class=17, bins=10, momentum=0.75):
 		super(GHMC_Loss, self).__init__()
+		self.num_class = num_class
+		self.bins = bins
+		self.momentum = momentum
+		self.edges = [float(x) / bins for x in range(bins + 1)]
+		self.edges[-1] += 1e-6
+		if momentum > 0:
+			# self.acc_sum = [[0.0 for _ in range(bins)] for _ in range(num_class)]
+			acc_sum = torch.zeros(bins, num_class)
+			acc_sum.fill_(1 / (bins * num_class))
+			self.register_buffer('acc_sum', acc_sum)
+
+	def forward(self, input, target):
+		""" Args:
+		input [batch_num, class_num]:
+			The direct prediction of classification fc layer.
+		target [batch_num, class_num]:
+			Binary target (0 or 1) for each sample each class. The value is -1
+			when the sample is ignored.
+		"""
+		edges = self.edges
+		mmt = self.momentum
+
+		# gradient length
+		g = torch.abs(torch.softmax(input, -1).detach() - target)
+
+		# tot = torch.mv(target, target.sum(0))
+		bs = input.size(0)
+		tot = 0
+		density = 0
+		n = 0  # n valid bins
+		for i in range(self.bins):
+			inds = ((g >= edges[i]) & (g < edges[i + 1]) & (target > 0)).float()  # bs, c
+			num_in_bin_by_c = inds.sum(0)  # c
+			if mmt > 0:
+				if self.training:
+					self.acc_sum[i] = mmt * self.acc_sum[i] + \
+									  (1 - mmt) * (num_in_bin_by_c / bs)
+				density += torch.mv(inds, self.acc_sum[i] * bs)
+				tot += torch.mv(target, self.acc_sum[i] * bs)
+
+			else:
+				density += torch.mv(inds, num_in_bin_by_c)
+				tot += torch.mv(target, num_in_bin_by_c)
+			n += torch.mv(target, (num_in_bin_by_c > 0).float())
+
+		weights = tot / density
+		weights = weights / n
+		loss = (weights * F.cross_entropy(input, target.max(-1)[1], reduction='none')).mean()
+		return loss
+
+
+class GHMC_Loss_ORG(_Loss):
+	def __init__(self, bins=10, momentum=0.75):
+		super(GHMC_Loss_ORG, self).__init__()
 		self.bins = bins
 		self.momentum = momentum
 		self.edges = [float(x) / bins for x in range(bins + 1)]
@@ -51,7 +105,7 @@ class GHMC_Loss(nn.Module):
 		weights = torch.zeros(input.size(0)).cuda()
 
 		# gradient length
-		g = (torch.abs(torch.softmax(input, -1).detach() - target) * target).sum(-1)
+		g = (torch.abs(torch.softmax(input,-1).detach() - target) * target).sum(-1)
 
 
 		tot = max(input.size(0), 1.0)

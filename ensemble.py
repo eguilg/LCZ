@@ -1,14 +1,19 @@
 import os
 import numpy as np
 
-input_dir = './score'
+input_dir = './score2_A'
 inputs = [
-	'score_0.9738586523125997.csv',  # 0.804
-	'score_0.9744318181818182.csv',  # 0.807
-	'score_0.9046128156960969.csv',
-	'score_xgb_3full_0.9472395180011692.csv',  # 不知道
-	'score_xgb_4full_0.9358961988387074.csv',  # 不知道
-	'score_xgb_full_0.9702184660268017.csv'  # 0.816 以上
+	'DENSE121_mixup0_foc1_weight0_decay0.01.csv',  # 0.804
+	'DENSE201_mixup0_foc1_weight0_decay0.01.csv',  # 0.807
+	'GAC_mixup0_foc1_weight0_decay0.01.csv',
+	'RES10_mixup0_foc0_weight1_decay0.01.csv',  # 不知道
+	'RES10_mixup0_foc1_weight0_decay0.01.csv',  # 不知道
+	'RES18_mixup0_foc1_weight0_decay0.01.csv',  # 0.816 以上
+	'SE-RES10_mixup0_foc1_weight0_decay0.01.csv',  # 0.816 以上
+	'SE-RES15_mixup0_foc1_weight0_decay0.01.csv',
+	'XCEPTION_mixup0_foc1_weight0_decay0.01.csv'
+
+
 ]
 
 llx_input_dir = './score_llx'
@@ -20,9 +25,9 @@ llx_inputs = [
 ]
 
 inputs = [os.path.join(input_dir, input) for input in inputs]
-llx_inputs = [os.path.join(llx_input_dir, input) for input in llx_inputs]
+# llx_inputs = [os.path.join(llx_input_dir, input) for input in llx_inputs]
 
-inputs += llx_inputs
+# inputs += llx_inputs
 print(inputs)
 
 # 84.5
@@ -43,4 +48,4 @@ for path in inputs:
 
 out /= total_score
 submit = np.eye(17)[np.argmax(out, axis=-1).reshape(-1)]
-np.savetxt('./submit/ensemble' + '.csv', submit, delimiter=',', fmt='%d')
+np.savetxt('./submit2_A/ensemble' + '.csv', submit, delimiter=',', fmt='%d')

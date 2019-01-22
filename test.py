@@ -16,15 +16,15 @@ import torchvision.models as models
 
 BATCH_SIZE = 32
 N_CHANNEL = 26
-TEST_B = True
+TEST_B = False
 
-test_file = '/home/zydq/Datasets/LCZ/round1_test_a_20181109.h5'
-submit_dir = './submit/'
-score_dir = './score/'
+test_file = '/home/zydq/Datasets/LCZ/round2_test_a_20190121.h5'
+submit_dir = './submit2_A/'
+score_dir = './score2_A/'
 if TEST_B:
 	test_file = '/home/zydq/Datasets/LCZ/round1_test_b_20190104.h5'
-	submit_dir = './submit_B/'
-	score_dir = './score_B/'
+	submit_dir = './submit2_B/'
+	score_dir = './score2_B/'
 mean_std_file = '/home/zydq/Datasets/LCZ/mean_std_f_test.h5'
 
 MODEL = 'GAC'

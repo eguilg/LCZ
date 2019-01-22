@@ -56,7 +56,7 @@ name_arg = [MODEL, 'mixup' + str(int(MIX_UP)), 'foc' + str(int(FOCAL)), 'weight'
 			'decay' + str(DECAY)]
 
 # extra_name = ['onval']
-extra_name = []
+extra_name = ['draft']
 
 name_arg += extra_name
 model_name = '_'.join(name_arg)
@@ -247,6 +247,8 @@ if __name__ == '__main__':
 				train_input, train_target = prepare_batch(train_data, train_label, f_idx_train, mean, std, aug=True)
 
 				model.train()
+				if not MIX_UP:
+					criteria.train()
 				optimizer.zero_grad()
 
 				if MIX_UP:
@@ -301,6 +303,8 @@ if __name__ == '__main__':
 					val_sample = 0
 					with torch.no_grad():
 						model.eval()
+						if not MIX_UP:
+							criteria.eval()
 						for val_data, val_label, f_idx_val in val_loader:
 							val_input, val_target = prepare_batch(val_data, val_label, f_idx_val, mean, std)
 							val_out = model(val_input)

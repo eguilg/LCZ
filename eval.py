@@ -46,8 +46,9 @@ model_dir = './checkpoints/GAC_mixup0_foc1_weight0_decay0.01'
 # model_dir = './checkpoints/XCEPTION_mixup0_foc1_weight0_decay0.01'
 
 model_dir = './checkpoints/RES10_mixup0_foc0_weight0_decay0.01'
+model_dir = './checkpoints/RES10_mixup0_foc0_weight0_decay0.01_draft'
 
-cur_model_path = os.path.join(model_dir, 'M_6.ckpt')
+cur_model_path = os.path.join(model_dir, 'M_5.ckpt')
 # cur_model_path = os.path.join(model_dir, 'state_curr.ckpt')
 
 if not os.path.isdir('./evaluate/'):

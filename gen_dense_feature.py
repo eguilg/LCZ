@@ -122,14 +122,15 @@ def gen_dense_feat(input_file, out_file, gabor=False):
 if __name__ == '__main__':
 	train_file = '/home/zydq/Datasets/LCZ/training.h5'
 	val_file = '/home/zydq/Datasets/LCZ/validation.h5'
-	testA_file = '/home/zydq/Datasets/LCZ/round1_test_a_20181109.h5'
+	# testA_file = '/home/zydq/Datasets/LCZ/round1_test_a_20181109.h5'
+	testA_file = '/home/zydq/Datasets/LCZ/round2_test_a_20190121.h5'
 
-	testB_file = '/home/zydq/Datasets/LCZ/round1_test_b_20190104.h5'
+	testB_file = '/home/zydq/Datasets/LCZ/round2_test_b_20190104.h5'
 
 	dense_train_file = '/home/zydq/Datasets/LCZ/dense_f_train.csv'
 	dense_val_file = '/home/zydq/Datasets/LCZ/dense_f_val.csv'
-	dense_testA_file = '/home/zydq/Datasets/LCZ/dense_f_test.csv'
+	dense_testA_file = '/home/zydq/Datasets/LCZ/dense_f_test2A.csv'
 
-	dense_testB_file = '/home/zydq/Datasets/LCZ/dense_f_testB.csv'
+	dense_testB_file = '/home/zydq/Datasets/LCZ/dense_f_test2B.csv'
 
-	gen_dense_feat(testB_file, dense_testB_file)
+	gen_dense_feat(testA_file, dense_testA_file)
