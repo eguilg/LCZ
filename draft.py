@@ -6,12 +6,11 @@ import numpy as np
 import pandas as pd
 import h5py
 # from gen_dense_feature import GaborFilters, make_gabor_conv_weight, gabor_batch
+from config import *
+import os.path as osp
 
-train_path = '/home/zydq/Datasets/LCZ/training.h5'
-vali_path = '/home/zydq/Datasets/LCZ/validation.h5'
-
-train_h5 = h5py.File(train_path, 'r')
-vali_h5 = h5py.File(vali_path, 'r')
+train_h5 = h5py.File(train_file, 'r')
+vali_h5 = h5py.File(val_file, 'r')
 label_names = ['LCZ 1:  Compact high-rise', 'LCZ 2:  Compact mid-rise', 'LCZ 3:  Compact low-rise',
 			   'LCZ 4:  Open high-rise', 'LCZ 5:  Open mid-rise', 'LCZ 6:  Open low-rise',
 			   'LCZ 7:  Lightweight low-rise', 'LCZ 8:  Large low-rise', 'LCZ 9:  Sparsely built',

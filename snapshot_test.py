@@ -11,32 +11,11 @@ from modules.lcz_res_net import resnet10, resnet18, resnet34, resnet50
 from modules.lcz_senet import se_resnet10_fc512, se_resnet15_fc512
 from modules.lcz_xception import Xception
 from modules.lcz_dense_net import densenet121, densenet169, densenet201, densenet161
+from config import *
 
 BATCH_SIZE = 100
-N_CHANNEL = 26
-TEST_B = False
 
-test_file = '/home/zydq/Datasets/LCZ/round2_test_a_20190121.h5'
-submit_dir = './submit2_A/'
-score_dir = './score2_A/'
-if TEST_B:
-	test_file = '/home/zydq/Datasets/LCZ/round1_test_b_20190104.h5'
-	submit_dir = './submit2_B/'
-	score_dir = './score2_B/'
-mean_std_file = '/home/zydq/Datasets/LCZ/mean_std_f_test.h5'
-
-model_name = 'GAC_mixup0_foc1_weight0_decay0.01'
-model_name = 'RES10_mixup0_foc1_weight0_decay0.01'
-model_name = 'RES18_mixup0_foc1_weight0_decay0.01'
-model_name = 'SE-RES10_mixup0_foc1_weight0_decay0.01'
-model_name = 'SE-RES15_mixup0_foc1_weight0_decay0.01'
-model_name = 'DENSE121_mixup0_foc1_weight0_decay0.01'
-model_name = 'DENSE201_mixup0_foc1_weight0_decay0.01'
-model_name = 'XCEPTION_mixup0_foc1_weight0_decay0.01'
-
-model_name = 'RES10_mixup0_foc0_weight1_decay0.01'
-
-model_dir = os.path.join('./checkpoints/', model_name)
+model_dir = os.path.join(model_root, model_name)
 MODEL = model_name.split('_')[0]
 
 models = [
@@ -51,6 +30,8 @@ models = [
 ]
 
 
+if not os.path.isdir(results_root):
+	os.mkdir(results_root)
 if not os.path.isdir(submit_dir):
 	os.mkdir(submit_dir)
 if not os.path.isdir(score_dir):

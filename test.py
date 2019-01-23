@@ -12,50 +12,30 @@ from modules.lcz_res_net import resnet10, resnet18, resnet34, resnet50
 from modules.lcz_senet import se_resnet10_fc512, se_resnet15_fc512
 from modules.lcz_dense_net import densenet121, densenet169, densenet201, densenet161
 
-import torchvision.models as models
+from config import  *
 
-BATCH_SIZE = 32
-N_CHANNEL = 26
-TEST_B = False
+BATCH_SIZE = 100
 
-test_file = '/home/zydq/Datasets/LCZ/round2_test_a_20190121.h5'
-submit_dir = './submit2_A/'
-score_dir = './score2_A/'
-if TEST_B:
-	test_file = '/home/zydq/Datasets/LCZ/round1_test_b_20190104.h5'
-	submit_dir = './submit2_B/'
-	score_dir = './score2_B/'
-mean_std_file = '/home/zydq/Datasets/LCZ/mean_std_f_test.h5'
 
-MODEL = 'GAC'
-# MODEL = 'RES10'
-# MODEL = 'RES18'
-# MODEL = 'SE-RES10'
-# MODEL = 'SE-RES15'
-# MODEL = 'DENSE121'
-# MODEL = 'DENSE201'
-# MODEL = 'XCEPTION'
-
-model_dir = './checkpoints/model_93071'  # GACNet cosine GP  L2 3e-2 trained on train val 1:1  0.9046 A0.852/0.8729 A0.833
-model_dir = './checkpoints/model_83173'  # GACNet cosine GP  L2 1e-2 MIXUP trained on train val 1:1  0.9163 A0.837
-model_dir = './checkpoints/model_79740'  # GACNet cosine GP  L2 1.5e-2 FOCAL trained on train val 1:1 0.9307
+model_dir = osp.join(model_root, model_name)
 
 cur_model_path = os.path.join(model_dir, 'state_curr.ckpt')
 
-
+if not os.path.isdir(results_root):
+	os.mkdir(results_root)
 if not os.path.isdir(submit_dir):
 	os.mkdir(submit_dir)
 if not os.path.isdir(score_dir):
 	os.mkdir(score_dir)
 if __name__ == '__main__':
 
-	mean_std_h5 = h5py.File(mean_std_file, 'r')
-	N_CHANNEL = mean_std_h5['mean'].shape[-1]
-	mean = [torch.from_numpy(np.array(mean_std_h5['mean']).reshape(-1, N_CHANNEL).mean(0)).cuda()]
-	std = [torch.from_numpy(np.sqrt((np.array(mean_std_h5['std']).reshape(-1, N_CHANNEL) ** 2).mean(0))).cuda()]
-	# mean = torch.from_numpy(np.array(mean_std_h5['mean'])).float().cuda()
-	# std = torch.from_numpy(np.array(mean_std_h5['std'])).float().cuda()
-	mean_std_h5.close()
+	# mean_std_h5 = h5py.File(mean_std_file, 'r')
+	# N_CHANNEL = mean_std_h5['mean'].shape[-1]
+	# mean = [torch.from_numpy(np.array(mean_std_h5['mean']).reshape(-1, N_CHANNEL).mean(0)).cuda()]
+	# std = [torch.from_numpy(np.sqrt((np.array(mean_std_h5['std']).reshape(-1, N_CHANNEL) ** 2).mean(0))).cuda()]
+	# # mean = torch.from_numpy(np.array(mean_std_h5['mean'])).float().cuda()
+	# # std = torch.from_numpy(np.array(mean_std_h5['std'])).float().cuda()
+	# mean_std_h5.close()
 
 	mean, std = None, None
 

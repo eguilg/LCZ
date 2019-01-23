@@ -17,53 +17,18 @@ from modules.scheduler import RestartCosineAnnealingLR, CosineAnnealingLR
 
 from modules.losses import FocalCE, GHMC_Loss
 
+from config import *
+
 T = 1.5
 ROUND = 6
 EPOCH = int(T * ROUND)
 N_SNAPSHOT = 6
-LR = 1e-4
-DECAY = 1e-2
-
-USE_CLASS_WEIGHT = False
-MIX_UP = False
-FOCAL = False
-GHM = True
-FINE_TUNE = False
 
 
-SEED = 502
-BATCH_SIZE = 64
-MIX_UP_ALPHA = 1.0
-N_CHANNEL = 26
+model_dir = osp.join(model_root, model_name)
 
-# MODEL = 'GAC'
-MODEL = 'RES10'
-# MODEL = 'RES18'
-# MODEL = 'SE-RES10'
-# MODEL = 'SE-RES15'
-# MODEL = 'DENSE121'
-# MODEL = 'DENSE201'
-# MODEL = 'XCEPTION'
-
-
-train_file = '/home/zydq/Datasets/LCZ/training.h5'
-val_file = '/home/zydq/Datasets/LCZ/validation.h5'
-mean_std_file = '/home/zydq/Datasets/LCZ/mean_std_f_trainval.h5'
-mean_std_file_train = '/home/zydq/Datasets/LCZ/mean_std_f_train.h5'
-mean_std_file_val = '/home/zydq/Datasets/LCZ/mean_std_f_val.h5'
-
-name_arg = [MODEL, 'mixup' + str(int(MIX_UP)), 'foc' + str(int(FOCAL)), 'weight' + str(int(USE_CLASS_WEIGHT)),
-			'decay' + str(DECAY)]
-
-# extra_name = ['onval']
-extra_name = ['draft']
-
-name_arg += extra_name
-model_name = '_'.join(name_arg)
-model_dir = './checkpoints/' + model_name
-
-if not os.path.isdir('./checkpoints/'):
-	os.mkdir('./checkpoints/')
+if not os.path.isdir(model_root):
+	os.mkdir(model_root)
 if not os.path.isdir(model_dir):
 	os.mkdir(model_dir)
 
@@ -88,24 +53,24 @@ def update_snapshot(state, snapshot_losses, prefix='M'):
 
 if __name__ == '__main__':
 
-	mean_std_h5_train = h5py.File(mean_std_file_train, 'r')
-	# N_CHANNEL = mean_std_h5_train['mean'].shape[-1]
-	mean_train = torch.from_numpy(np.array(mean_std_h5_train['mean']).reshape(-1, N_CHANNEL).mean(0)).float().cuda()
-	std_train = torch.from_numpy(
-		np.sqrt((np.array(mean_std_h5_train['std']).reshape(-1, N_CHANNEL) ** 2).mean(0))).float().cuda()
-	# mean = torch.from_numpy(np.array(mean_std_h5['mean'])).float().cuda()
-	# std = torch.from_numpy(np.array(mean_std_h5['std'])).float().cuda()
-	mean_std_h5_train.close()
-
-	mean_std_h5_val = h5py.File(mean_std_file_val, 'r')
-	mean_val = torch.from_numpy(np.array(mean_std_h5_val['mean']).reshape(-1, N_CHANNEL).mean(0)).float().cuda()
-	std_val = torch.from_numpy(
-		np.sqrt((np.array(mean_std_h5_val['std']).reshape(-1, N_CHANNEL) ** 2).mean(0))).float().cuda()
-	# mean = torch.from_numpy(np.array(mean_std_h5['mean'])).float().cuda()
-	# std = torch.from_numpy(np.array(mean_std_h5['std'])).float().cuda()
-	mean_std_h5_val.close()
-	mean = [mean_train, mean_val]
-	std = [std_train, std_val]
+	# mean_std_h5_train = h5py.File(mean_std_file_train, 'r')
+	# # N_CHANNEL = mean_std_h5_train['mean'].shape[-1]
+	# mean_train = torch.from_numpy(np.array(mean_std_h5_train['mean']).reshape(-1, N_CHANNEL).mean(0)).float().cuda()
+	# std_train = torch.from_numpy(
+	# 	np.sqrt((np.array(mean_std_h5_train['std']).reshape(-1, N_CHANNEL) ** 2).mean(0))).float().cuda()
+	# # mean = torch.from_numpy(np.array(mean_std_h5['mean'])).float().cuda()
+	# # std = torch.from_numpy(np.array(mean_std_h5['std'])).float().cuda()
+	# mean_std_h5_train.close()
+	#
+	# mean_std_h5_val = h5py.File(mean_std_file_val, 'r')
+	# mean_val = torch.from_numpy(np.array(mean_std_h5_val['mean']).reshape(-1, N_CHANNEL).mean(0)).float().cuda()
+	# std_val = torch.from_numpy(
+	# 	np.sqrt((np.array(mean_std_h5_val['std']).reshape(-1, N_CHANNEL) ** 2).mean(0))).float().cuda()
+	# # mean = torch.from_numpy(np.array(mean_std_h5['mean'])).float().cuda()
+	# # std = torch.from_numpy(np.array(mean_std_h5['std'])).float().cuda()
+	# mean_std_h5_val.close()
+	# mean = [mean_train, mean_val]
+	# std = [std_train, std_val]
 	mean, std = None, None
 
 	# train val 合并再划分

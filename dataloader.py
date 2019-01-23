@@ -159,8 +159,7 @@ class _MyDataIter(object):
 
 
 if __name__ == '__main__':
-	train_file = '/home/zydq/Datasets/LCZ/training.h5'
-	val_file = '/home/zydq/Datasets/LCZ/validation.h5'
+	from config import *
 
 	data_source = H5DataSource([train_file, val_file], 256, [0.02282, 2 / 3], split=0.05, seed=502)
 	# train_loader = MyDataLoader(data_source.h5fids, data_source.train_indices)

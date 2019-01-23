@@ -17,41 +17,18 @@ from modules.lcz_dense_net import densenet121, densenet169, densenet201, densene
 from modules.scheduler import RestartCosineAnnealingLR, CosineAnnealingLR
 
 from modules.losses import FocalCE
+from config import  *
 
 SEED = 502
 T = 1.5
 M = 6
 EPOCH = math.ceil(T * M)
-BATCH_SIZE = 64
-LR = 1e-4
-DECAY = 1e-2
-USE_CLASS_WEIGHT = False
-MIX_UP = False
-FOCAL = True
-MIX_UP_ALPHA = 1.0
-N_CHANNEL = 26
-
-MODEL = 'GAC'
-# MODEL = 'RES10'
-# MODEL = 'RES18'
-# MODEL = 'SE-RES10'
-# MODEL = 'SE-RES50'
-# MODEL = 'DENSE121'
-# MODEL = 'DENSE201'
-# MODEL = 'XCEPTION'
 
 
+model_dir = osp.join(model_root, 'model_' + str(round(time.time() % 100000)))
 
-train_file = '/home/zydq/Datasets/LCZ/training.h5'
-val_file = '/home/zydq/Datasets/LCZ/validation.h5'
-mean_std_file = '/home/zydq/Datasets/LCZ/mean_std_f_trainval.h5'
-mean_std_file_train = '/home/zydq/Datasets/LCZ/mean_std_f_train.h5'
-mean_std_file_val = '/home/zydq/Datasets/LCZ/mean_std_f_val.h5'
-
-model_dir = './checkpoints/model_' + str(round(time.time() % 100000))
-
-if not os.path.isdir('./checkpoints/'):
-	os.mkdir('./checkpoints/')
+if not os.path.isdir(model_root):
+	os.mkdir(model_root)
 if not os.path.isdir(model_dir):
 	os.mkdir(model_dir)
 cur_model_path = os.path.join(model_dir, 'state_curr.ckpt')

@@ -1,7 +1,9 @@
 import os
 import numpy as np
+from config import *
+import os.path as osp
 
-input_dir = './score2_A'
+input_dir = osp.join(results_root, 'score2_A')
 inputs = [
 	'DENSE121_mixup0_foc1_weight0_decay0.01.csv',  # 0.804
 	'DENSE201_mixup0_foc1_weight0_decay0.01.csv',  # 0.807
@@ -16,18 +18,8 @@ inputs = [
 
 ]
 
-llx_input_dir = './score_llx'
-llx_inputs = [
-	'test819_batch64_steps800_lczNetNew_data_softmax.csv',
-	'sen2_renext_softmax.csv',
-	'resnextNew_data2_softmax.csv',
-	'resnext_four_train985_val945_softmax.csv'
-]
-
 inputs = [os.path.join(input_dir, input) for input in inputs]
-# llx_inputs = [os.path.join(llx_input_dir, input) for input in llx_inputs]
 
-# inputs += llx_inputs
 print(inputs)
 
 # 84.5

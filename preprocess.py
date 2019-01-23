@@ -151,9 +151,7 @@ def mixup_criterion(criterion, pred, y_a, y_b, lam):
 
 
 if __name__ == '__main__':
-	train_file = '/home/zydq/Datasets/LCZ/training.h5'
-	val_file = '/home/zydq/Datasets/LCZ/validation.h5'
-	test_file = '/home/zydq/Datasets/LCZ/round1_test_a_20181109.h5'
+	from config import  *
 	mean_std_file = '/home/zydq/Datasets/LCZ/mean_std_f_train.h5'
 
 	init_data_source = H5DataSource([train_file], 5000, shuffle=False, split=False)

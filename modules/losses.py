@@ -28,7 +28,7 @@ class FocalCE(_WeightedLoss):
 
 
 class GHMC_Loss(_Loss):
-	def __init__(self, num_class=17, bins=10, momentum=0.75):
+	def __init__(self, num_class=17, bins=10, momentum=0):
 		super(GHMC_Loss, self).__init__()
 		self.num_class = num_class
 		self.bins = bins
@@ -67,16 +67,17 @@ class GHMC_Loss(_Loss):
 				if self.training:
 					self.acc_sum[i] = mmt * self.acc_sum[i] + \
 									  (1 - mmt) * (num_in_bin_by_c / bs)
-				density += torch.mv(inds, self.acc_sum[i] * bs)
-				tot += torch.mv(target, self.acc_sum[i] * bs)
-
+				density += torch.mv(inds, self.acc_sum[i])
+				tot += torch.mv(target, self.acc_sum[i])
+				n += torch.mv(target, (self.acc_sum[i] > 0).float())
 			else:
 				density += torch.mv(inds, num_in_bin_by_c)
 				tot += torch.mv(target, num_in_bin_by_c)
-			n += torch.mv(target, (num_in_bin_by_c > 0).float())
+				n += torch.mv(target, (num_in_bin_by_c > 0).float())
 
 		weights = tot / density
 		weights = weights / n
+		print(weights.sum())
 		loss = (weights * F.cross_entropy(input, target.max(-1)[1], reduction='none')).mean()
 		return loss
 

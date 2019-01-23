@@ -13,66 +13,37 @@ from modules.lcz_senet import se_resnet10_fc512, se_resnet15_fc512
 from modules.lcz_dense_net import densenet121, densenet169, densenet201, densenet161
 from sklearn.metrics import classification_report, confusion_matrix
 # import torchvision.models as models
-
-BATCH_SIZE = 64
-SEED = 502
-train_file = '/home/zydq/Datasets/LCZ/training.h5'
-val_file = '/home/zydq/Datasets/LCZ/validation.h5'
-test_file = '/home/zydq/Datasets/LCZ/round1_test_a_20181109.h5'
-mean_std_file = '/home/zydq/Datasets/LCZ/mean_std_f_trainval.h5'
-mean_std_file_train = '/home/zydq/Datasets/LCZ/mean_std_f_train.h5'
-mean_std_file_val = '/home/zydq/Datasets/LCZ/mean_std_f_val.h5'
-
-# MODEL = 'GAC'
-MODEL = 'RES10'
-# MODEL = 'RES18'
-# MODEL = 'SE-RES10'
-# MODEL = 'SE-RES15'
-# MODEL = 'DENSE121'
-# MODEL = 'DENSE201'
-# MODEL = 'XCEPTION'
+from config import *
 
 
-# model_dir = './checkpoints/model_93071'
+model_dir = osp.join(model_root, model_name)
+# model_dir = './checkpoints/RES10_mixup0_foc0_weight0_decay0.01_draft'
 
-
-model_dir = './checkpoints/GAC_mixup0_foc1_weight0_decay0.01'
-# model_dir = './checkpoints/RES18_mixup0_foc1_weight0_decay0.01'
-# model_dir = './checkpoints/RES10_mixup0_foc1_weight0_decay0.01'
-# model_dir = './checkpoints/SE-RES10_mixup0_foc1_weight0_decay0.01'
-# model_dir = './checkpoints/SE-RES15_mixup0_foc1_weight0_decay0.01'
-# model_dir = './checkpoints/DENSE121_mixup0_foc1_weight0_decay0.01'
-# model_dir = './checkpoints/DENSE201_mixup0_foc1_weight0_decay0.01'
-# model_dir = './checkpoints/XCEPTION_mixup0_foc1_weight0_decay0.01'
-
-model_dir = './checkpoints/RES10_mixup0_foc0_weight0_decay0.01'
-model_dir = './checkpoints/RES10_mixup0_foc0_weight0_decay0.01_draft'
-
-cur_model_path = os.path.join(model_dir, 'M_5.ckpt')
+cur_model_path = os.path.join(model_dir, 'M_3.ckpt')
 # cur_model_path = os.path.join(model_dir, 'state_curr.ckpt')
 
 if not os.path.isdir('./evaluate/'):
 	os.mkdir('./evaluate/')
 if __name__ == '__main__':
 
-	mean_std_h5_train = h5py.File(mean_std_file_train, 'r')
-	N_CHANNEL = mean_std_h5_train['mean'].shape[-1]
-	mean_train = torch.from_numpy(np.array(mean_std_h5_train['mean']).reshape(-1, N_CHANNEL).mean(0)).float().cuda()
-	std_train = torch.from_numpy(
-		np.sqrt((np.array(mean_std_h5_train['std']).reshape(-1, N_CHANNEL) ** 2).mean(0))).float().cuda()
-	# mean = torch.from_numpy(np.array(mean_std_h5['mean'])).float().cuda()
-	# std = torch.from_numpy(np.array(mean_std_h5['std'])).float().cuda()
-	mean_std_h5_train.close()
-
-	mean_std_h5_val = h5py.File(mean_std_file_val, 'r')
-	mean_val = torch.from_numpy(np.array(mean_std_h5_val['mean']).reshape(-1, N_CHANNEL).mean(0)).float().cuda()
-	std_val = torch.from_numpy(
-		np.sqrt((np.array(mean_std_h5_val['std']).reshape(-1, N_CHANNEL) ** 2).mean(0))).float().cuda()
-	# mean = torch.from_numpy(np.array(mean_std_h5['mean'])).float().cuda()
-	# std = torch.from_numpy(np.array(mean_std_h5['std'])).float().cuda()
-	mean_std_h5_val.close()
-	mean = [mean_train, mean_val]
-	std = [std_train, std_val]
+	# mean_std_h5_train = h5py.File(mean_std_file_train, 'r')
+	# N_CHANNEL = mean_std_h5_train['mean'].shape[-1]
+	# mean_train = torch.from_numpy(np.array(mean_std_h5_train['mean']).reshape(-1, N_CHANNEL).mean(0)).float().cuda()
+	# std_train = torch.from_numpy(
+	# 	np.sqrt((np.array(mean_std_h5_train['std']).reshape(-1, N_CHANNEL) ** 2).mean(0))).float().cuda()
+	# # mean = torch.from_numpy(np.array(mean_std_h5['mean'])).float().cuda()
+	# # std = torch.from_numpy(np.array(mean_std_h5['std'])).float().cuda()
+	# mean_std_h5_train.close()
+	#
+	# mean_std_h5_val = h5py.File(mean_std_file_val, 'r')
+	# mean_val = torch.from_numpy(np.array(mean_std_h5_val['mean']).reshape(-1, N_CHANNEL).mean(0)).float().cuda()
+	# std_val = torch.from_numpy(
+	# 	np.sqrt((np.array(mean_std_h5_val['std']).reshape(-1, N_CHANNEL) ** 2).mean(0))).float().cuda()
+	# # mean = torch.from_numpy(np.array(mean_std_h5['mean'])).float().cuda()
+	# # std = torch.from_numpy(np.array(mean_std_h5['std'])).float().cuda()
+	# mean_std_h5_val.close()
+	# mean = [mean_train, mean_val]
+	# std = [std_train, std_val]
 
 	mean, std = None, None
 
