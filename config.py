@@ -1,6 +1,6 @@
 import os.path as osp
 
-LOCAL = True
+LOCAL = False
 TEST_B = False
 
 if LOCAL:
