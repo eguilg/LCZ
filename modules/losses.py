@@ -77,7 +77,7 @@ class GHMC_Loss(_Loss):
 
 		weights = tot / density
 		weights = weights / n
-		print(weights.sum())
+		# print(weights.sum())
 		loss = (weights * F.cross_entropy(input, target.max(-1)[1], reduction='none')).mean()
 		return loss
 
