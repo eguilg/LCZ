@@ -8,14 +8,15 @@ if LOCAL:
 	data_root = '/home/zydq/Datasets/LCZ/'
 	results_root = './'
 else:
-	model_root = '/nas/checkpoints'
+	model_root = '../checkpoints'
 	data_root = '/nas/LCZ/'
-	results_root = '/nas/results/'
+	results_root = '../results/'
 
 train_file = osp.join(data_root, 'training.h5')
 val_file = osp.join(data_root, 'validation.h5')
 test2A_file = osp.join(data_root, 'round2_test_a_20190121.h5')
-test2B_file = osp.join(data_root, 'round2_test_b_20190121.h5') # B榜
+test2B_file = osp.join(data_root, 'round2_test_b_20190121.h5')  # B榜
+
 if TEST_B:
 	test_file = test2B_file
 	submit_dir = osp.join(results_root, 'submit2_B')
