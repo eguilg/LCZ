@@ -86,9 +86,10 @@ if __name__ == '__main__':
 			state = torch.load(ckpt_path)
 			model.load_state_dict(state['model_state'])
 			m_score = state['score']
+
+			m_loss = state['loss']
 			if m_score < 0.875:
 				continue
-			m_loss = state['loss']
 			print('score:', m_score)
 			print('loss:', m_loss)
 			print('-' * 80)
