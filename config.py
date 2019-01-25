@@ -57,7 +57,7 @@ name_arg = [MODEL, 'mixup' + str(int(MIX_UP)), 'foc' + str(int(FOCAL)), 'weight'
 			'decay' + str(DECAY)]
 
 # extra_name = ['onval']
-extra_name = ['draft2']
+extra_name = ['draft']
 
 name_arg += extra_name
 model_name = '_'.join(name_arg)

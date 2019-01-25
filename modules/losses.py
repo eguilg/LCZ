@@ -28,7 +28,7 @@ class FocalCE(_WeightedLoss):
 
 
 class GHMC_Loss(_Loss):
-	def __init__(self, num_class=17, bins=10, momentum=0):
+	def __init__(self, num_class=17, bins=10, momentum=0.75):
 		super(GHMC_Loss, self).__init__()
 		self.num_class = num_class
 		self.bins = bins
@@ -38,7 +38,7 @@ class GHMC_Loss(_Loss):
 		if momentum > 0:
 			# self.acc_sum = [[0.0 for _ in range(bins)] for _ in range(num_class)]
 			acc_sum = torch.zeros(bins, num_class)
-			acc_sum.fill_(1 / (bins * num_class))
+			# acc_sum.fill_(1 / (bins * num_class))
 			self.register_buffer('acc_sum', acc_sum)
 
 	def forward(self, input, target):
@@ -53,31 +53,27 @@ class GHMC_Loss(_Loss):
 		mmt = self.momentum
 
 		# gradient length
-		g = torch.abs(torch.softmax(input, -1).detach() - target)
+		g = (torch.abs(torch.softmax(input, -1).detach() - target) * target).sum(-1)  # bs
+		weights = torch.zeros(input.size(0)).cuda()
 
-		# tot = torch.mv(target, target.sum(0))
-		bs = input.size(0)
-		tot = 0
-		density = 0
+		tot = torch.mv(target, target.sum(0))
+
 		n = 0  # n valid bins
 		for i in range(self.bins):
-			inds = ((g >= edges[i]) & (g < edges[i + 1]) & (target > 0)).float()  # bs, c
-			num_in_bin_by_c = inds.sum(0)  # c
+			inds = (g >= edges[i]) & (g < edges[i + 1])  # bs
+			num_in_bin_by_c = torch.mm(inds.float().unsqueeze(0), target).squeeze(0)  # c
+			mask = num_in_bin_by_c > 0
 			if mmt > 0:
 				if self.training:
-					self.acc_sum[i] = mmt * self.acc_sum[i] + \
-									  (1 - mmt) * (num_in_bin_by_c / bs)
-				density += torch.mv(inds, self.acc_sum[i])
-				tot += torch.mv(target, self.acc_sum[i])
-				n += torch.mv(target, (self.acc_sum[i] > 0).float())
+					self.acc_sum[i][mask] = mmt * self.acc_sum[i][mask] + \
+									  (1 - mmt) * num_in_bin_by_c[mask]
+				weights[inds] = tot[inds] / torch.mv(target[inds], self.acc_sum[i])
 			else:
-				density += torch.mv(inds, num_in_bin_by_c)
-				tot += torch.mv(target, num_in_bin_by_c)
-				n += torch.mv(target, (num_in_bin_by_c > 0).float())
+				weights[inds] = tot[inds] / torch.mv(target[inds], num_in_bin_by_c)
 
-		weights = tot / density
-		weights = weights / n
-		# print(weights.sum())
+			n += torch.mv(target, mask.float())
+
+		weights = weights / n 
 		loss = (weights * F.cross_entropy(input, target.max(-1)[1], reduction='none')).mean()
 		return loss
 
@@ -92,7 +88,6 @@ class GHMC_Loss_ORG(_Loss):
 		if momentum > 0:
 			self.acc_sum = [0.0 for _ in range(bins)]
 
-
 	def forward(self, input, target):
 		""" Args:
 		input [batch_num, class_num]:
@@ -106,8 +101,7 @@ class GHMC_Loss_ORG(_Loss):
 		weights = torch.zeros(input.size(0)).cuda()
 
 		# gradient length
-		g = (torch.abs(torch.softmax(input,-1).detach() - target) * target).sum(-1)
-
+		g = (torch.abs(torch.softmax(input, -1).detach() - target) * target).sum(-1)
 
 		tot = max(input.size(0), 1.0)
 		n = 0  # n valid bins

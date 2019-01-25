@@ -146,7 +146,7 @@ if __name__ == '__main__':
 	if FOCAL:
 		crit = FocalCE
 	elif GHM:
-		crit = GHMC_Loss_ORG
+		crit = GHMC_Loss
 	else:
 		crit = nn.CrossEntropyLoss
 
