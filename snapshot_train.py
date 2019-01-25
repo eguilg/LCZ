@@ -15,7 +15,7 @@ from modules.lcz_xception import Xception
 from modules.lcz_senet import se_resnet10_fc512, se_resnet15_fc512
 from modules.scheduler import RestartCosineAnnealingLR, CosineAnnealingLR
 
-from modules.losses import FocalCE, GHMC_Loss
+from modules.losses import FocalCE, GHMC_Loss, GHMC_Loss_ORG
 
 from config import *
 
@@ -146,7 +146,7 @@ if __name__ == '__main__':
 	if FOCAL:
 		crit = FocalCE
 	elif GHM:
-		crit = GHMC_Loss
+		crit = GHMC_Loss_ORG
 	else:
 		crit = nn.CrossEntropyLoss
 
