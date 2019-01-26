@@ -16,25 +16,31 @@ train_file = osp.join(data_root, 'training.h5')
 val_file = osp.join(data_root, 'validation.h5')
 test2A_file = osp.join(data_root, 'round2_test_a_20190121.h5')
 test2B_file = osp.join(data_root, 'round2_test_b_20190121.h5')  # B榜
+mean_std_train_file = osp.join(data_root, 'mean_std_train.h5')
+
+mean_std_val_file = osp.join(data_root, 'mean_std_val.h5')
+mean_std_test2a_file = osp.join(data_root, 'mean_std_test2a.h5')
+mean_std_test2b_file = osp.join(data_root, 'mean_std_test2b.h5')
 
 if TEST_B:
 	test_file = test2B_file
+	mean_std_test_file = mean_std_test2b_file
 	submit_dir = osp.join(results_root, 'submit2_B')
 	score_dir = osp.join(results_root, 'score2_B')
 else:
 	test_file = test2A_file
+	mean_std_test_file = mean_std_test2a_file
 	submit_dir = osp.join(results_root, 'submit2_A')
 	score_dir = osp.join(results_root, 'score2_A')
 
-mean_std_file = osp.join(data_root, 'mean_std_f_trainval.h5')
-mean_std_file_train = osp.join(data_root, 'mean_std_f_train.h5')
-mean_std_file_val = osp.join(data_root, 'mean_std_f_val.h5')
+
 
 USE_CLASS_WEIGHT = False
 MIX_UP = False
-FOCAL = False
-GHM = True
+FOCAL = True
+GHM = False
 FINE_TUNE = False
+TEST_REPEAT = 5
 
 SEED = 502
 BATCH_SIZE = 64
@@ -57,7 +63,7 @@ name_arg = [MODEL, 'mixup' + str(int(MIX_UP)), 'foc' + str(int(FOCAL)), 'weight'
 			'decay' + str(DECAY)]
 
 # extra_name = ['onval']
-extra_name = ['draft']
+extra_name = ['norm_crop']
 
 name_arg += extra_name
 model_name = '_'.join(name_arg)

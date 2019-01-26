@@ -35,25 +35,18 @@ cur_model_path = os.path.join(model_dir, 'state_curr.ckpt')
 
 if __name__ == '__main__':
 
-	mean_std_h5_train = h5py.File(mean_std_file_train, 'r')
-	# N_CHANNEL = mean_std_h5_train['mean'].shape[-1]
-	mean_train = torch.from_numpy(np.array(mean_std_h5_train['mean']).reshape(-1, N_CHANNEL).mean(0)).float().cuda()
-	std_train = torch.from_numpy(
-		np.sqrt((np.array(mean_std_h5_train['std']).reshape(-1, N_CHANNEL) ** 2).mean(0))).float().cuda()
-	# mean = torch.from_numpy(np.array(mean_std_h5['mean'])).float().cuda()
-	# std = torch.from_numpy(np.array(mean_std_h5['std'])).float().cuda()
+	mean_std_h5_train = h5py.File(mean_std_train_file, 'r')
+	mean_train = torch.from_numpy(np.array(mean_std_h5_train['mean'])).float().cuda()
+	std_train = torch.from_numpy(np.array(mean_std_h5_train['std'])).float().cuda()
 	mean_std_h5_train.close()
 
-	mean_std_h5_val = h5py.File(mean_std_file_val, 'r')
-	mean_val = torch.from_numpy(np.array(mean_std_h5_val['mean']).reshape(-1, N_CHANNEL).mean(0)).float().cuda()
-	std_val = torch.from_numpy(
-		np.sqrt((np.array(mean_std_h5_val['std']).reshape(-1, N_CHANNEL) ** 2).mean(0))).float().cuda()
-	# mean = torch.from_numpy(np.array(mean_std_h5['mean'])).float().cuda()
-	# std = torch.from_numpy(np.array(mean_std_h5['std'])).float().cuda()
+	mean_std_h5_val = h5py.File(mean_std_val_file, 'r')
+	mean_val = torch.from_numpy(np.array(mean_std_h5_val['mean'])).float().cuda()
+	std_val = torch.from_numpy(np.array(mean_std_h5_val['std'])).float().cuda()
 	mean_std_h5_val.close()
-	mean = [mean_train, mean_val]
-	std = [std_train, std_val]
-	mean, std = None, None
+
+	mean = torch.cat([mean_train[np.newaxis, :], mean_val[np.newaxis, :]], dim=0)
+	std = torch.cat([std_train[np.newaxis, :], std_val[np.newaxis, :]], dim=0)
 
 	# train val 合并再划分
 	# data_source = H5DataSource([train_file, val_file], BATCH_SIZE, split=0.07, seed=SEED)
@@ -227,7 +220,7 @@ if __name__ == '__main__':
 					with torch.no_grad():
 						model.eval()
 						for val_data, val_label, f_idx_val in val_loader:
-							val_input, val_target = prepare_batch(val_data, val_label, f_idx_val, mean, std)
+							val_input, val_target = prepare_batch(val_data, val_label, f_idx_val, mean_val, std_val)
 							val_out = model(val_input)
 							if FOCAL:
 								val_loss_total += criteria(train_out, train_target).item()

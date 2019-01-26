@@ -29,15 +29,11 @@ if not os.path.isdir(score_dir):
 	os.mkdir(score_dir)
 if __name__ == '__main__':
 
-	# mean_std_h5 = h5py.File(mean_std_file, 'r')
-	# N_CHANNEL = mean_std_h5['mean'].shape[-1]
-	# mean = [torch.from_numpy(np.array(mean_std_h5['mean']).reshape(-1, N_CHANNEL).mean(0)).cuda()]
-	# std = [torch.from_numpy(np.sqrt((np.array(mean_std_h5['std']).reshape(-1, N_CHANNEL) ** 2).mean(0))).cuda()]
-	# # mean = torch.from_numpy(np.array(mean_std_h5['mean'])).float().cuda()
-	# # std = torch.from_numpy(np.array(mean_std_h5['std'])).float().cuda()
-	# mean_std_h5.close()
+	mean_std_h5 = h5py.File(mean_std_test_file, 'r')
+	mean = torch.from_numpy(np.array(mean_std_h5['mean'])).float().cuda()
+	std = torch.from_numpy(np.array(mean_std_h5['std'])).float().cuda()
+	mean_std_h5.close()
 
-	mean, std = None, None
 
 	data_source = H5DataSource([test_file], BATCH_SIZE, shuffle=False)
 	test_loader = MyDataLoader(data_source.h5fids, data_source.indices)

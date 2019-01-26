@@ -31,33 +31,33 @@ def preprocess_batch(x_b, mean=None, std=None):
 	# B8 & b4
 	L = 0.428
 	SAVI = (S2_BANDS[:, :, :, 6:7] - S2_BANDS[:, :, :, 2:3]) / (S2_BANDS[:, :, :, 6:7] + S2_BANDS[:, :, :, 2:3] + L) * (
-				1.0 + L)  # -0.65 ~ 0.65
+			1.0 + L)  # -0.65 ~ 0.65
 	SAVI = (SAVI + 0.65) / 1.3  # B8 & B4
 	PSSR = (S2_BANDS[:, :, :, 6:7] / S2_BANDS[:, :, :, 2:3].clamp_min(1e-20) - 0.058) / (17.157 - 0.058)
 	PSSR = PSSR.clamp(0, 1)  # b8 & b4
 	NDVI = (S2_BANDS[:, :, :, 6:7] - S2_BANDS[:, :, :, 2:3]) / (
-				S2_BANDS[:, :, :, 6:7] + S2_BANDS[:, :, :, 2:3]).clamp_min(1e-20)
+			S2_BANDS[:, :, :, 6:7] + S2_BANDS[:, :, :, 2:3]).clamp_min(1e-20)
 	NDVI = (NDVI + 1) / 2  # b8 & b4
 	UCNDVI = 1 - 2 * torch.sqrt(
 		(S2_BANDS[:, :, :, 6:7] * 0.02) ** 2 + (S2_BANDS[:, :, :, 2:3] * 0.03) ** 2);  # uncertainty of NDVI
 
 	# B8 & B11 / B12
 	NDWI = (S2_BANDS[:, :, :, 6:7] - S2_BANDS[:, :, :, 8:9]) / (
-				S2_BANDS[:, :, :, 6:7] + S2_BANDS[:, :, :, 8:9]).clamp_min(1e-20)
+			S2_BANDS[:, :, :, 6:7] + S2_BANDS[:, :, :, 8:9]).clamp_min(1e-20)
 	NDWI = (NDWI + 1) / 2
 	MSI = (S2_BANDS[:, :, :, 8:9] / S2_BANDS[:, :, :, 6:7].clamp_min(1e-20) - 0.058) / (17.145 - 0.058)
 	MSI = MSI.clamp(0, 1)
 	NBR = (S2_BANDS[:, :, :, 6:7] - S2_BANDS[:, :, :, 9:10]) / (
-				S2_BANDS[:, :, :, 6:7] + S2_BANDS[:, :, :, 9:10]).clamp_min(1e-20)
+			S2_BANDS[:, :, :, 6:7] + S2_BANDS[:, :, :, 9:10]).clamp_min(1e-20)
 	NBR = (NBR + 1) / 2
 
 	# lower wave length
 	MCARI = ((S2_BANDS[:, :, :, 3:4] - S2_BANDS[:, :, :, 2:3]) - 0.2 * (
-				S2_BANDS[:, :, :, 3:4] - S2_BANDS[:, :, :, 1:2])) * (
-						S2_BANDS[:, :, :, 3:4] / S2_BANDS[:, :, :, 1:2].clamp_min(1e-20));
+			S2_BANDS[:, :, :, 3:4] - S2_BANDS[:, :, :, 1:2])) * (
+					S2_BANDS[:, :, :, 3:4] / S2_BANDS[:, :, :, 1:2].clamp_min(1e-20));
 	MCARI = ((MCARI - (-1.03)) / (4.606 + 1.03)).clamp(0, 1)
 	GNDVI = (S2_BANDS[:, :, :, 6:7] - S2_BANDS[:, :, :, 1:2]) / (
-				S2_BANDS[:, :, :, 6:7] + S2_BANDS[:, :, :, 1:2]).clamp_min(1e-20)
+			S2_BANDS[:, :, :, 6:7] + S2_BANDS[:, :, :, 1:2]).clamp_min(1e-20)
 	GNDVI = (GNDVI + 1) / 2
 	CHLRED = (S2_BANDS[:, :, :, 3:4] / S2_BANDS[:, :, :, 5:6].clamp_min(1e-20) - 0.058) / (17.149 - 0.058)
 	CHLRED = CHLRED.clamp(0, 1)
@@ -73,19 +73,25 @@ def preprocess_batch(x_b, mean=None, std=None):
 	], dim=-1)
 
 	if mean is not None and std is not None:
-		x_b = (x_b - mean[None, None, None, :]) / std[None, None, None, :]
-	# x_b = (x_b - mean[None, :, :, :]) / std[None, :, :, :]
+		if len(mean.shape) == 2:
+			x_b = (x_b - mean[:, None, None, :]) / std[:, None, None, :]
+		else:
+			x_b = (x_b - mean[None, :]) / std[None, :]
 	return x_b
 
 
-# def to_wh(x_b):
-# 	xx = x_b.view(x_b.shape[0:3] + (4, 4)).transpose(3, 2)
-# 	x_b0 = xx.contiguous().view(x_b.shape[0], x_b.shape[1] * 4, x_b.shape[2] * 4)[:, :, :, None]
-# 	x_b1 = xx.flip(2).contiguous().view(x_b.shape[0], x_b.shape[1] * 4, x_b.shape[2] * 4)[:, :, :, None]
-# 	x_b2 = xx.flip(4).contiguous().view(x_b.shape[0], x_b.shape[1] * 4, x_b.shape[2] * 4)[:, :, :, None]
-#
-# 	x_b = torch.cat([x_b0, x_b1, x_b2], -1)
-# 	return x_b
+def random_crop(batch_img, pad=4):
+	h, w = batch_img.shape[1:3]
+
+	for k in range(batch_img.shape[0]):
+		img = np.pad(batch_img[k], ((pad, pad), (pad, pad), (0, 0)), 'constant', constant_values=0)
+		i = np.random.randint(0, 2 * pad)
+		j = np.random.randint(0, 2 * pad)
+
+		batch_img[k] = img[i:i + h, j:j + w, :]
+
+	return batch_img
+
 
 def data_aug(x_b):
 	batch_size = x_b.shape[0]
@@ -110,26 +116,29 @@ def data_aug(x_b):
 	random_idx = np.arange(batch_size)[np.random.rand(batch_size) > 0.75]
 	x_b[random_idx] = np.rot90(x_b[random_idx], 2, axes=(1, 2))
 
+	# random crop
+	random_idx = np.arange(batch_size)[np.random.rand(batch_size) > 0.75]
+	x_b[random_idx] = random_crop(x_b[random_idx])
+
 	return x_b
 
 
 def prepare_batch(x_b, y_b, f_idx=None, mean=None, std=None, aug=False):
-	# x_b = (x_b - mean[None, None, None, :]) / std[None, None, None, :]
-	# x_b = (x_b - mean[None, :, :, :]) / std[None, :, :, :]
 	if mean is not None and std is not None:
-		mean = mean[f_idx]
-		std = std[f_idx]
+		if len(mean.shape) == 2:
+			mean = mean[f_idx]
+			std = std[f_idx]
 	if aug:
 		x_b = data_aug(x_b)
 
 	x_b = torch.from_numpy(x_b).float().cuda()
 
 	x_b = preprocess_batch(x_b, mean, std)
-	x_b = x_b.transpose(2, 3).transpose(1, 2)  # bs nc w h
+	x_b = x_b.permute(0, 3, 1, 2)  # bs nc w h
 	if y_b is not None:
 		y_b = torch.from_numpy(y_b).float().cuda()
 
-	return x_b[:, :, :, :], y_b
+	return x_b, y_b
 
 
 def mixup_data(x, y, alpha=1.0):
@@ -151,15 +160,15 @@ def mixup_criterion(criterion, pred, y_a, y_b, lam):
 
 
 if __name__ == '__main__':
-	from config import  *
-	mean_std_file = '/home/zydq/Datasets/LCZ/mean_std_f_train.h5'
+	from config import *
 
-	init_data_source = H5DataSource([train_file], 5000, shuffle=False, split=False)
+	init_data_source = H5DataSource([test_file], 5000, shuffle=False, split=False)
 	init_loader = MyDataLoader(init_data_source.h5fids, init_data_source.indices)
 	mean, std, n = 0, 0, 0
 	for data, label, _ in tqdm(init_loader):
 		data = torch.from_numpy(data).float().cuda()
 		data = preprocess_batch(data)
+		data = data.view(-1, data.size(3))
 		mean += data.sum(0)
 		n += data.shape[0]
 
@@ -168,12 +177,14 @@ if __name__ == '__main__':
 	for data, label, _ in tqdm(init_loader):
 		data = torch.from_numpy(data).float().cuda()
 		data = preprocess_batch(data)
-		std += ((data - mean[None, :, :, :]) ** 2).sum(0)
+		data = data.view(-1, data.size(3))
+		std += ((data - mean) ** 2).sum(0)
 
 	std = torch.sqrt(std / n).detach().cpu().numpy()
 	mean = mean.detach().cpu().numpy()
-
-	mean_std_h5 = h5py.File(mean_std_file, 'a')
+	print(mean)
+	print(std)
+	mean_std_h5 = h5py.File(mean_std_test_file, 'a')
 	mean_std_h5.create_dataset('mean', data=mean)
 	mean_std_h5.create_dataset('std', data=std)
 	mean_std_h5.close()

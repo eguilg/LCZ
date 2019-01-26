@@ -1,5 +1,6 @@
 import os
 import time
+import h5py
 from tqdm import tqdm
 import torch
 import torch.nn.functional as F
@@ -38,13 +39,10 @@ if not os.path.isdir(score_dir):
 	os.mkdir(score_dir)
 if __name__ == '__main__':
 
-	# mean_std_h5 = h5py.File(mean_std_file, 'r')
-	# # N_CHANNEL = mean_std_h5['mean'].shape[-1]
-	# mean = [torch.from_numpy(np.array(mean_std_h5['mean']).reshape(-1, N_CHANNEL).mean(0)).cuda()]
-	# std = [torch.from_numpy(np.sqrt((np.array(mean_std_h5['std']).reshape(-1, N_CHANNEL) ** 2).mean(0))).cuda()]
-	# # mean = torch.from_numpy(np.array(mean_std_h5['mean'])).float().cuda()
-	# # std = torch.from_numpy(np.array(mean_std_h5['std'])).float().cuda()
-	# mean_std_h5.close()
+	mean_std_h5 = h5py.File(mean_std_test_file, 'r')
+	mean = torch.from_numpy(np.array(mean_std_h5['mean'])).float().cuda()
+	std = torch.from_numpy(np.array(mean_std_h5['std'])).float().cuda()
+	mean_std_h5.close()
 
 	if MODEL == 'GAC':
 		group_sizes = [3, 3,
@@ -78,40 +76,41 @@ if __name__ == '__main__':
 	n_model = 0
 	ensembled_pred = None
 	ensembled_score = 0
-	for ckpt_name in models:
-		ckpt_path = os.path.join(model_dir, ckpt_name)
-		mean, std = None, None
-		if os.path.isfile(ckpt_path):
-			print('load training param, ', ckpt_path)
-			state = torch.load(ckpt_path)
-			model.load_state_dict(state['model_state'])
-			m_score = state['score']
+	for t in range(TEST_REPEAT):
+		for ckpt_name in models:
+			ckpt_path = os.path.join(model_dir, ckpt_name)
+			mean, std = None, None
+			if os.path.isfile(ckpt_path):
+				print('load training param, ', ckpt_path)
+				state = torch.load(ckpt_path)
+				model.load_state_dict(state['model_state'])
+				m_score = state['score']
 
-			m_loss = state['loss']
-			if m_score < 0.875:
-				continue
-			print('score:', m_score)
-			print('loss:', m_loss)
-			print('-' * 80)
-			print('Testing...')
+				m_loss = state['loss']
+				if m_score < 0.875:
+					continue
+				print('score:', m_score)
+				print('loss:', m_loss)
+				print('-' * 80)
+				print('Testing...')
 
-			total_score = None
-			with torch.no_grad():
-				model.eval()
-				for test_data, _, fidx in tqdm(test_loader):
-					time.sleep(0.02)
-					test_input, _ = prepare_batch(test_data, None, fidx, mean, std)
-					test_out = F.softmax(model(test_input), -1)
-					score = test_out.detach().cpu().numpy()
-					if total_score is None:
-						# total_pred = pred
-						total_score = score
-					else:
-						# total_pred = np.concatenate([total_pred, pred])
-						total_score = np.concatenate([total_score, score])
-			ensembled_score += total_score
-			n_model += 1
-			del state
+				total_score = None
+				with torch.no_grad():
+					model.eval()
+					for test_data, _, fidx in tqdm(test_loader):
+						time.sleep(0.02)
+						test_input, _ = prepare_batch(test_data, None, fidx, mean, std, aug=True)
+						test_out = F.softmax(model(test_input), -1)
+						score = test_out.detach().cpu().numpy()
+						if total_score is None:
+							# total_pred = pred
+							total_score = score
+						else:
+							# total_pred = np.concatenate([total_pred, pred])
+							total_score = np.concatenate([total_score, score])
+				ensembled_score += total_score
+				n_model += 1
+				del state
 
 	ensembled_score /= n_model
 	ensembled_pred = ensembled_score.argmax(-1)

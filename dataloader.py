@@ -35,7 +35,8 @@ class SampledDataSorce(object):
 			self.val_indices = [[h5file_indice[-bid] for h5file_indice in self.h5file_indices] for bid in
 								range(1, split_idx + 1)]
 			self.train_indices = [
-				[self.h5file_indices[fid][bid % (self.batch_nums[fid] - split_idx)] for fid in range(len(self.h5file_indices))] for
+				[self.h5file_indices[fid][bid % (self.batch_nums[fid] - split_idx)] for fid in
+				 range(len(self.h5file_indices))] for
 				bid in range(max(self.batch_nums) - split_idx)]
 
 			print(self.train_indices)
@@ -50,7 +51,6 @@ class SampledDataSorce(object):
 												self.class_weights[14:17].sum()])
 			print(self.node_class_weights)
 			print(self.class_weights)
-
 
 
 class H5DataSource(object):
@@ -149,13 +149,14 @@ class _MyDataIter(object):
 					),
 					axis=3)
 			))
-			f_idx_b.append(f_idx)
+			f_idx_b.append([f_idx] * (b_end - b_start))
 		x_b = np.concatenate(x_b, axis=0)
+		f_idx_b = np.concatenate(f_idx_b, axis=0)
 		if len(y_b) != 0:
 			y_b = np.concatenate(y_b, axis=0)
 		else:
 			y_b = None
-		return x_b, y_b, f_idx
+		return x_b, y_b, f_idx_b
 
 
 if __name__ == '__main__':
