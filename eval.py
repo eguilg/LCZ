@@ -19,7 +19,7 @@ from config import *
 model_dir = osp.join(model_root, model_name)
 # model_dir = './checkpoints/RES10_mixup0_foc0_weight0_decay0.01_draft'
 
-cur_model_path = os.path.join(model_dir, 'M_best.ckpt')
+cur_model_path = os.path.join(model_dir, 'M_6.ckpt')
 # cur_model_path = os.path.join(model_dir, 'state_curr.ckpt')
 
 if not os.path.isdir('./evaluate/'):
@@ -32,6 +32,7 @@ if __name__ == '__main__':
 	std = torch.from_numpy(np.array(mean_std_h5_val['std'])).float().cuda()
 	mean_std_h5_val.close()
 
+	mean, std = None, None
 
 	# train val 合并再划分
 	# data_source = H5DataSource([train_file, val_file], BATCH_SIZE, split=0.07, seed=SEED)

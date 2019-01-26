@@ -37,8 +37,8 @@ else:
 
 USE_CLASS_WEIGHT = False
 MIX_UP = False
-FOCAL = True
-GHM = False
+FOCAL = False
+GHM = True
 FINE_TUNE = False
 TEST_REPEAT = 5
 
@@ -63,7 +63,7 @@ name_arg = [MODEL, 'mixup' + str(int(MIX_UP)), 'foc' + str(int(FOCAL)), 'weight'
 			'decay' + str(DECAY)]
 
 # extra_name = ['onval']
-extra_name = ['norm_crop']
+extra_name = ['crop']
 
 name_arg += extra_name
 model_name = '_'.join(name_arg)

@@ -44,6 +44,8 @@ if __name__ == '__main__':
 	std = torch.from_numpy(np.array(mean_std_h5['std'])).float().cuda()
 	mean_std_h5.close()
 
+	mean, std = None, None
+
 	if MODEL == 'GAC':
 		group_sizes = [3, 3,
 					   3, 3, 2, 2,

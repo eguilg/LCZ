@@ -65,6 +65,8 @@ if __name__ == '__main__':
 	mean = torch.cat([mean_train[np.newaxis, :], mean_val[np.newaxis, :]], dim=0)
 	std = torch.cat([std_train[np.newaxis, :], std_val[np.newaxis, :]], dim=0)
 
+	mean, std = None, None
+	mean_val, std_val = None, None
 
 	# train val 合并再划分
 	# data_source = H5DataSource([train_file, val_file], BATCH_SIZE, split=0.07, seed=SEED)

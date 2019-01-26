@@ -34,6 +34,7 @@ if __name__ == '__main__':
 	std = torch.from_numpy(np.array(mean_std_h5['std'])).float().cuda()
 	mean_std_h5.close()
 
+	mean, std = None, None
 
 	data_source = H5DataSource([test_file], BATCH_SIZE, shuffle=False)
 	test_loader = MyDataLoader(data_source.h5fids, data_source.indices)
