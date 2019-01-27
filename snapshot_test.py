@@ -89,7 +89,7 @@ if __name__ == '__main__':
 				m_score = state['score']
 
 				m_loss = state['loss']
-				if m_score < 0.875:
+				if m_score < SCORE_THRESH:
 					continue
 				print('score:', m_score)
 				print('loss:', m_loss)

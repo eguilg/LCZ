@@ -97,28 +97,27 @@ def data_aug(x_b):
 	batch_size = x_b.shape[0]
 
 	#  flip h
-	random_idx = np.arange(batch_size)[np.random.rand(batch_size) > 0.75]
+	random_idx = np.arange(batch_size)[np.random.rand(batch_size) > 0.5]
 	x_b[random_idx] = np.flip(x_b[random_idx], 1)
 
 	#  flip v
-	random_idx = np.arange(batch_size)[np.random.rand(batch_size) > 0.75]
+	random_idx = np.arange(batch_size)[np.random.rand(batch_size) > 0.5]
 	x_b[random_idx] = np.flip(x_b[random_idx], 2)
 
 	#  transpose
-	random_idx = np.arange(batch_size)[np.random.rand(batch_size) > 0.75]
+	random_idx = np.arange(batch_size)[np.random.rand(batch_size) > 0.5]
 	x_b[random_idx] = np.transpose(x_b[random_idx], (0, 2, 1, 3))
 
 	#  rotate 90
-	random_idx = np.arange(batch_size)[np.random.rand(batch_size) > 0.75]
+	random_idx = np.arange(batch_size)[np.random.rand(batch_size) > 0.5]
 	x_b[random_idx] = np.rot90(x_b[random_idx], 1, axes=(1, 2))
 
 	#  rotate 180
-	random_idx = np.arange(batch_size)[np.random.rand(batch_size) > 0.75]
+	random_idx = np.arange(batch_size)[np.random.rand(batch_size) > 0.5]
 	x_b[random_idx] = np.rot90(x_b[random_idx], 2, axes=(1, 2))
 
 	# random crop
-	random_idx = np.arange(batch_size)[np.random.rand(batch_size) > 0.75]
-	x_b[random_idx] = random_crop(x_b[random_idx])
+	x_b = random_crop(x_b)
 
 	return x_b
 

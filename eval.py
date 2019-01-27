@@ -19,7 +19,7 @@ from config import *
 model_dir = osp.join(model_root, model_name)
 # model_dir = './checkpoints/RES10_mixup0_foc0_weight0_decay0.01_draft'
 
-cur_model_path = os.path.join(model_dir, 'M_6.ckpt')
+cur_model_path = os.path.join(model_dir, 'M_curr.ckpt')
 # cur_model_path = os.path.join(model_dir, 'state_curr.ckpt')
 
 if not os.path.isdir('./evaluate/'):
@@ -44,10 +44,16 @@ if __name__ == '__main__':
 	# train_loader = MyDataLoader(data_source.h5fids, data_source.train_indices)
 	# val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
 
-	# train val 固定比例
-	data_source = SampledDataSorce([train_file, val_file], BATCH_SIZE, sample_rate=[0.5, 0.5], seed=SEED)
+	# train val 固定比例 1 : 1
+	# data_source = SampledDataSorce([train_file, val_file], BATCH_SIZE, sample_rate=[0.5, 0.5], seed=SEED)
+	# train_loader = MyDataLoader(data_source.h5fids, data_source.train_indices)
+	# val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
+
+	# train val 固定比例 1:7
+	data_source = SampledDataSorce([train_file, val_file], BATCH_SIZE, sample_rate=[0.125, 0.875], seed=SEED)
 	train_loader = MyDataLoader(data_source.h5fids, data_source.train_indices)
 	val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
+
 	class_weights = torch.from_numpy(data_source.class_weights).float().cuda().clamp(0, 1)
 	print(class_weights)
 

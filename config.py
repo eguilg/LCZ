@@ -37,10 +37,9 @@ else:
 
 USE_CLASS_WEIGHT = False
 MIX_UP = False
-FOCAL = False
-GHM = True
+FOCAL = True
+GHM = False
 FINE_TUNE = False
-TEST_REPEAT = 5
 
 SEED = 502
 BATCH_SIZE = 64
@@ -64,10 +63,14 @@ name_arg = [MODEL, 'mixup' + str(int(MIX_UP)), 'foc' + str(int(FOCAL)), 'weight'
 
 # extra_name = ['onval']
 extra_name = ['crop']
-
+SCORE_THRESH = 0.89
+TEST_REPEAT = 10
 name_arg += extra_name
 model_name = '_'.join(name_arg)
 
 # model_name = 'model_93071'; MODEL = 'GAC'# GACNet cosine GP  L2 3e-2 trained on train val 1:1  0.9046 A0.852/0.8729 A0.833
 # model_name = 'model_83173'; MODEL = 'GAC'  # GACNet cosine GP  L2 1e-2 MIXUP trained on train val 1:1  0.9163 A0.837
 # model_name = 'model_79740'; MODEL = 'GAC'  # GACNet cosine GP  L2 1.5e-2 FOCAL trained on train val 1:1 0.9307
+
+# model_name = 'RES10_mixup0_foc1_weight0_decay0.01_crop'
+# model_name = 'RES10_mixup0_foc0_weight0_decay0.01_crop'
