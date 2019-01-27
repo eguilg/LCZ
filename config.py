@@ -62,7 +62,7 @@ name_arg = [MODEL, 'mixup' + str(int(MIX_UP)), 'foc' + str(int(FOCAL)), 'weight'
 			'decay' + str(DECAY)]
 
 # extra_name = ['onval']
-extra_name = ['crop']
+extra_name = ['crop_1:7']
 SCORE_THRESH = 0.89
 TEST_REPEAT = 10
 name_arg += extra_name
