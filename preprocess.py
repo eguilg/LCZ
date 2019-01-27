@@ -1,6 +1,7 @@
 import h5py
 import torch
 import math
+from functools import partial
 import numpy as np
 from tqdm import tqdm
 from dataloader import H5DataSource, MyDataLoader
@@ -79,17 +80,18 @@ def preprocess_batch(x_b, mean=None, std=None):
 			x_b = (x_b - mean[None, :]) / std[None, :]
 	return x_b
 
+def random_crop(img, pad=4):
+	h, w, _ = img.shape
+	img = np.pad(img, ((pad, pad), (pad, pad), (0, 0)), 'constant', constant_values=0)
+	i = np.random.randint(0, 2 * pad)
+	j = np.random.randint(0, 2 * pad)
 
-def random_crop(batch_img, pad=4):
-	h, w = batch_img.shape[1:3]
+	img = img[i:i + h, j:j + w, :]
+	return img
 
-	for k in range(batch_img.shape[0]):
-		img = np.pad(batch_img[k], ((pad, pad), (pad, pad), (0, 0)), 'constant', constant_values=0)
-		i = np.random.randint(0, 2 * pad)
-		j = np.random.randint(0, 2 * pad)
-
-		batch_img[k] = img[i:i + h, j:j + w, :]
-
+def random_crop_batch(batch_img, pad=4):
+	mapfunc = partial(random_crop, pad=pad)
+	batch_img = np.array(list(map(mapfunc, batch_img)))
 	return batch_img
 
 
@@ -117,7 +119,7 @@ def data_aug(x_b):
 	x_b[random_idx] = np.rot90(x_b[random_idx], 2, axes=(1, 2))
 
 	# random crop
-	x_b = random_crop(x_b)
+	x_b = random_crop_batch(x_b)
 
 	return x_b
 
