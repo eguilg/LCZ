@@ -100,7 +100,7 @@ if __name__ == '__main__':
 	# val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
 
 	# train val 固定比例 1:7
-	data_source = SampledDataSorce([train_file, val_file], BATCH_SIZE, sample_rate=[0.125, 0.8725], seed=SEED)
+	data_source = SampledDataSorce([train_file, val_file], BATCH_SIZE, sample_rate=[0.125, 0.875], seed=SEED)
 	train_loader = MyDataLoader(data_source.h5fids, data_source.train_indices)
 	val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
 
