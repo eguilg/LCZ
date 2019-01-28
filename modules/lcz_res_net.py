@@ -88,10 +88,10 @@ class CbamBottleneck(nn.Module):
 
 class LCZResNet(nn.Module):
 
-	def __init__(self, block, in_planes, layers, num_classes=17):
+	def __init__(self, block, in_planes, layers, num_classes=17, first_kernel=3):
 		self.inplanes = 64
 		super(LCZResNet, self).__init__()
-		self.conv1 = nn.Conv2d(in_planes, 64, kernel_size=3, stride=1, padding=1,
+		self.conv1 = nn.Conv2d(in_planes, 64, kernel_size=first_kernel, stride=1, padding=first_kernel // 2,
 							   bias=False)  # 32 * 32
 		self.bn1 = nn.BatchNorm2d(64)
 		self.relu = nn.ReLU(inplace=True)

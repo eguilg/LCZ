@@ -44,7 +44,7 @@ if __name__ == '__main__':
 	std = torch.from_numpy(np.array(mean_std_h5['std'])).float().cuda()
 	mean_std_h5.close()
 
-	mean, std = None, None
+	# mean, std = None, None
 
 	if MODEL == 'GAC':
 		group_sizes = [3, 3,
@@ -78,7 +78,7 @@ if __name__ == '__main__':
 	n_model = 0
 	ensembled_pred = None
 	ensembled_score = 0
-	for t in range(TEST_REPEAT):
+	for t in range(TEST_REPEAT + 1):
 		for ckpt_name in models:
 			ckpt_path = os.path.join(model_dir, ckpt_name)
 			mean, std = None, None
@@ -101,7 +101,10 @@ if __name__ == '__main__':
 					model.eval()
 					for test_data, _, fidx in tqdm(test_loader):
 						time.sleep(0.02)
-						test_input, _ = prepare_batch(test_data, None, fidx, mean, std, aug=True)
+						aug = True
+						if t == 0:
+							aug = False
+						test_input, _ = prepare_batch(test_data, None, fidx, mean, std, aug=aug)
 						test_out = F.softmax(model(test_input), -1)
 						score = test_out.detach().cpu().numpy()
 						if total_score is None:

@@ -5,6 +5,8 @@ from functools import partial
 import numpy as np
 from tqdm import tqdm
 from dataloader import H5DataSource, MyDataLoader
+from torchvision import transforms
+from h5transform import *
 
 
 def preprocess_batch(x_b, mean=None, std=None):
@@ -80,17 +82,21 @@ def preprocess_batch(x_b, mean=None, std=None):
 			x_b = (x_b - mean[None, :]) / std[None, :]
 	return x_b
 
+
 def random_crop(img, pad=4):
 	h, w, _ = img.shape
+
 	img = np.pad(img, ((pad, pad), (pad, pad), (0, 0)), 'constant', constant_values=0)
+
 	i = np.random.randint(0, 2 * pad)
 	j = np.random.randint(0, 2 * pad)
 
 	img = img[i:i + h, j:j + w, :]
 	return img
 
-def random_crop_batch(batch_img, pad=4):
-	mapfunc = partial(random_crop, pad=pad)
+
+def random_crop_batch(batch_img, pad=4, mean=None):
+	mapfunc = partial(random_crop, pad=pad, mean=mean)
 	batch_img = np.array(list(map(mapfunc, batch_img)))
 	return batch_img
 
@@ -124,18 +130,36 @@ def data_aug(x_b):
 	return x_b
 
 
+def data_aug_torch(x_b, trans):
+	for i in range(x_b.shape[0]):
+		x_b[i] = trans(x_b[i])
+	return x_b
+
+
+trans = transforms.Compose([
+	H5RandomHorizontalFlip(cuda=True),
+	H5RandomVerticalFlip(cuda=True),
+	H5RandomRotate(cuda=True),
+	H5RandomCrop(32, 4),
+	Cutout(14, 0.5)
+])
+
+
 def prepare_batch(x_b, y_b, f_idx=None, mean=None, std=None, aug=False):
 	if mean is not None and std is not None:
 		if len(mean.shape) == 2:
 			mean = mean[f_idx]
 			std = std[f_idx]
-	if aug:
-		x_b = data_aug(x_b)
 
 	x_b = torch.from_numpy(x_b).float().cuda()
 
 	x_b = preprocess_batch(x_b, mean, std)
-	x_b = x_b.permute(0, 3, 1, 2)  # bs nc w h
+	x_b = x_b.permute(0, 3, 1, 2)  # bs nc h w
+
+	if aug:
+		x_b = data_aug_torch(x_b, trans)
+
+
 	if y_b is not None:
 		y_b = torch.from_numpy(y_b).float().cuda()
 

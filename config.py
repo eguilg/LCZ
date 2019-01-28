@@ -1,6 +1,6 @@
 import os.path as osp
 
-LOCAL = False
+LOCAL = True
 TEST_B = False
 
 if LOCAL:
@@ -34,23 +34,26 @@ else:
 	score_dir = osp.join(results_root, 'score2_A')
 
 
-
+NO_BN_WD = True
 USE_CLASS_WEIGHT = False
 MIX_UP = False
-FOCAL = True
+FOCAL = False
 GHM = False
 FINE_TUNE = False
 
+
 SEED = 502
+EPOCH = 13
 BATCH_SIZE = 64
 MIX_UP_ALPHA = 1.0
 N_CHANNEL = 26
 
-LR = 1e-4
-DECAY = 1e-2
+LR = 0.02
+DECAY = 4e-4
 
 # MODEL = 'GAC'
 MODEL = 'RES10'
+# MODEL = 'RESW10'
 # MODEL = 'RES18'
 # MODEL = 'SE-RES10'
 # MODEL = 'SE-RES15'
@@ -62,7 +65,7 @@ name_arg = [MODEL, 'mixup' + str(int(MIX_UP)), 'foc' + str(int(FOCAL)), 'weight'
 			'decay' + str(DECAY)]
 
 # extra_name = ['onval']
-extra_name = ['crop_1:7']
+extra_name = ['sgd_bs'+str(BATCH_SIZE)]
 SCORE_THRESH = 0.89
 TEST_REPEAT = 10
 name_arg += extra_name

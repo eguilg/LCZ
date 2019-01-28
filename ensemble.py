@@ -3,18 +3,23 @@ import numpy as np
 from config import *
 import os.path as osp
 
-input_dir = osp.join(results_root, 'score2_A')
+input_dir = score_dir
 inputs = [
-	'DENSE121_mixup0_foc1_weight0_decay0.01.csv',  # 0.804
-	'DENSE201_mixup0_foc1_weight0_decay0.01.csv',  # 0.807
+	'DENSE121_mixup0_foc1_weight0_decay0.01.csv',
+	'DENSE201_mixup0_foc1_weight0_decay0.01.csv',
 	'GAC_mixup0_foc1_weight0_decay0.01.csv',
-	'RES10_mixup0_foc0_weight1_decay0.01.csv',  # 不知道
-	'RES10_mixup0_foc1_weight0_decay0.01.csv',  # 不知道
-	'RES18_mixup0_foc1_weight0_decay0.01.csv',  # 0.816 以上
-	'SE-RES10_mixup0_foc1_weight0_decay0.01.csv',  # 0.816 以上
+	'RES10_mixup0_foc0_weight1_decay0.01.csv',
+	'RES10_mixup0_foc1_weight0_decay0.01.csv',
+	'RES10_mixup0_foc1_weight0_decay0.01_crop.csv',
+	'RES10_mixup0_foc1_weight0_decay0.01_crop_1:7.csv',
+	'RES18_mixup0_foc1_weight0_decay0.01.csv',
+	'SE-RES10_mixup0_foc1_weight0_decay0.01.csv',
 	'SE-RES15_mixup0_foc1_weight0_decay0.01.csv',
-	'XCEPTION_mixup0_foc1_weight0_decay0.01.csv'
+	'XCEPTION_mixup0_foc1_weight0_decay0.01.csv',
 
+	'score_0.9046128156960969.csv',
+	'score_0.9307034022124817.csv',
+	'score_0.9163013984554372.csv',
 
 ]
 
@@ -40,4 +45,6 @@ for path in inputs:
 
 out /= total_score
 submit = np.eye(17)[np.argmax(out, axis=-1).reshape(-1)]
-np.savetxt('./submit2_A/ensemble' + '.csv', submit, delimiter=',', fmt='%d')
+
+np.savetxt(osp.join(submit_dir, 'ensemble' + '.csv'), submit, delimiter=',', fmt='%d')
+np.savetxt(osp.join(score_dir, 'ensemble' + '.csv'), out, delimiter=',', fmt='%.5f')

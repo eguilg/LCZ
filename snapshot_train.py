@@ -14,16 +14,12 @@ from modules.lcz_dense_net import densenet121, densenet169, densenet201, densene
 from modules.lcz_xception import Xception
 from modules.lcz_senet import se_resnet10_fc512, se_resnet15_fc512
 from modules.scheduler import RestartCosineAnnealingLR, CosineAnnealingLR
-
 from modules.losses import FocalCE, GHMC_Loss, GHMC_Loss_ORG
+from optim import LARSOptimizer
 
 from config import *
 
-T = 1.5
-ROUND = 6
-EPOCH = int(T * ROUND)
 N_SNAPSHOT = 6
-
 
 model_dir = osp.join(model_root, model_name)
 
@@ -34,6 +30,7 @@ if not os.path.isdir(model_dir):
 
 cur_model_path = os.path.join(model_dir, 'M_curr.ckpt')
 best_model_path = os.path.join(model_dir, 'M_best.ckpt')
+
 
 def update_snapshot(state, snapshot_losses, prefix='M'):
 	if len(snapshot_losses) < N_SNAPSHOT:
@@ -51,6 +48,7 @@ def update_snapshot(state, snapshot_losses, prefix='M'):
 		torch.save(state, M_path)
 		print('saved snapshot to', M_path)
 
+
 if __name__ == '__main__':
 
 	mean_std_h5_train = h5py.File(mean_std_train_file, 'r')
@@ -65,8 +63,8 @@ if __name__ == '__main__':
 	mean = torch.cat([mean_train[np.newaxis, :], mean_val[np.newaxis, :]], dim=0)
 	std = torch.cat([std_train[np.newaxis, :], std_val[np.newaxis, :]], dim=0)
 
-	mean, std = None, None
-	mean_val, std_val = None, None
+	# mean, std = None, None
+	# mean_val, std_val = None, None
 
 	# train val 合并再划分
 	# data_source = H5DataSource([train_file, val_file], BATCH_SIZE, split=0.07, seed=SEED)
@@ -95,15 +93,14 @@ if __name__ == '__main__':
 	# val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
 
 	# train val 固定比例 1:1
-	# data_source = SampledDataSorce([train_file, val_file], BATCH_SIZE, sample_rate=[0.5, 0.5], seed=SEED)
-	# train_loader = MyDataLoader(data_source.h5fids, data_source.train_indices)
-	# val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
-
-	# train val 固定比例 1:7
-	data_source = SampledDataSorce([train_file, val_file], BATCH_SIZE, sample_rate=[0.125, 0.875], seed=SEED)
+	data_source = SampledDataSorce([train_file, val_file], BATCH_SIZE, sample_rate=[0.5, 0.5], seed=SEED)
 	train_loader = MyDataLoader(data_source.h5fids, data_source.train_indices)
 	val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
 
+	# train val 固定比例 1:7
+	# data_source = SampledDataSorce([train_file, val_file], BATCH_SIZE, sample_rate=[0.125, 0.875], seed=SEED)
+	# train_loader = MyDataLoader(data_source.h5fids, data_source.train_indices)
+	# val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
 
 	class_weights = torch.from_numpy(data_source.class_weights).float().cuda()
 	node_class_weights = torch.from_numpy(data_source.node_class_weights).float().cuda()
@@ -123,6 +120,8 @@ if __name__ == '__main__':
 		model = Xception(N_CHANNEL, 17)
 	elif MODEL == 'RES10':
 		model = resnet10(N_CHANNEL, 17)
+	elif MODEL == 'RESW10':
+		model = resnet10(N_CHANNEL, 17, first_kernel=5)
 	elif MODEL == 'RES18':
 		model = resnet18(N_CHANNEL, 17)
 	elif MODEL == 'SE-RES10':
@@ -155,8 +154,30 @@ if __name__ == '__main__':
 		criteria = crit(weight=class_weights).cuda()
 	else:
 		criteria = crit().cuda()
-	optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=DECAY)
-	lr_scheduler = RestartCosineAnnealingLR(optimizer, T_max=int(T * len(train_loader)), eta_min=0)
+
+	if NO_BN_WD:
+		params = [
+			{
+				'params': [
+					param for name, param in model.named_parameters()
+					if 'bn' not in name
+				]
+			},
+			{
+				'params': [
+					param for name, param in model.named_parameters()
+					if 'bn' in name
+				],
+				'weight_decay':
+					0
+			},
+		]
+	else:
+		params = model.parameters()
+	# optimizer = torch.optim.Adam(params, lr=LR, weight_decay=DECAY)
+	optimizer = torch.optim.SGD(params, lr=LR, weight_decay=DECAY)
+	# optimizer = LARSOptimizer(params, lr=LR, weight_decay=DECAY)
+	lr_scheduler = CosineAnnealingLR(optimizer, T_max=int(EPOCH * len(train_loader)), eta_min=0)
 
 	snapshot_losses = []
 	for i in range(1, N_SNAPSHOT + 1):
