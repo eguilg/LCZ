@@ -1,6 +1,6 @@
 import os.path as osp
 
-LOCAL = True
+LOCAL = False
 TEST_B = False
 
 if LOCAL:
@@ -51,8 +51,8 @@ N_CHANNEL = 26
 LR = 0.02
 DECAY = 4e-4
 
-# MODEL = 'GAC'
-MODEL = 'RES10'
+MODEL = 'GAC'
+# MODEL = 'RES10'
 # MODEL = 'RESW10'
 # MODEL = 'RES18'
 # MODEL = 'SE-RES10'

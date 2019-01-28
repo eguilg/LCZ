@@ -231,7 +231,15 @@ if __name__ == '__main__':
 		train_loader.shuffle_batch(SEED)
 		with tqdm(total=len(train_loader)) as bar:
 			for i, (train_data, train_label, f_idx_train) in enumerate(train_loader):
+
 				train_input, train_target = prepare_batch(train_data, train_label, f_idx_train, mean, std, aug=True)
+
+				# import matplotlib.pyplot as plt
+				# mm = mean[0, None,None,[8,6,7]]
+				# ss = std[0, None,None,[8,6,7]]
+				# img = (train_input[0][[8, 6, 7], :, :].permute(1,2,0) * ss + mm).cpu().numpy()
+				# plt.imshow(img * 2.55)
+				# plt.show()
 
 				model.train()
 				if not MIX_UP:
