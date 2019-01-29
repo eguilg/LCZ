@@ -81,7 +81,6 @@ if __name__ == '__main__':
 	for t in range(TEST_REPEAT + 1):
 		for ckpt_name in models:
 			ckpt_path = os.path.join(model_dir, ckpt_name)
-			mean, std = None, None
 			if os.path.isfile(ckpt_path):
 				print('load training param, ', ckpt_path)
 				state = torch.load(ckpt_path)
@@ -105,6 +104,14 @@ if __name__ == '__main__':
 						if t == 0:
 							aug = False
 						test_input, _ = prepare_batch(test_data, None, fidx, mean, std, aug=aug)
+
+						# import matplotlib.pyplot as plt
+						# mm = mean[None,None,[8,6,7]]
+						# ss = std[None,None,[8,6,7]]
+						# img = (test_input[0][[8, 6, 7], :, :].permute(1,2,0) * ss + mm).cpu().numpy()
+						# plt.imshow(img * 2.55)
+						# plt.show()
+
 						test_out = F.softmax(model(test_input), -1)
 						score = test_out.detach().cpu().numpy()
 						if total_score is None:
