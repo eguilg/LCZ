@@ -14,8 +14,13 @@ else:
 
 train_file = osp.join(data_root, 'training.h5')
 val_file = osp.join(data_root, 'validation.h5')
+soft_labeld_data_file = osp.join(data_root, 'soft_labeled_data.h5')
+
+
+testA_file = osp.join(data_root, 'round1_test_a_20181109.h5')
+testB_file = osp.join(data_root, 'round1_test_b_20190104.h5')  # 1B榜
 test2A_file = osp.join(data_root, 'round2_test_a_20190121.h5')
-test2B_file = osp.join(data_root, 'round2_test_b_20190121.h5')  # B榜
+test2B_file = osp.join(data_root, 'round2_test_b_20190121.h5')  # 2B榜
 mean_std_train_file = osp.join(data_root, 'mean_std_train.h5')
 
 mean_std_val_file = osp.join(data_root, 'mean_std_val.h5')
@@ -33,8 +38,7 @@ else:
 	submit_dir = osp.join(results_root, 'submit2_A')
 	score_dir = osp.join(results_root, 'score2_A')
 
-
-NO_BN_WD = True
+ZSCORE = False
 USE_CLASS_WEIGHT = False
 MIX_UP = False
 FOCAL = False
@@ -48,8 +52,9 @@ BATCH_SIZE = 64
 MIX_UP_ALPHA = 1.0
 N_CHANNEL = 26
 
-LR = 0.02
-DECAY = 4e-4
+LR = 0.0001
+DECAY = 5e-3
+L1_WEIGHT = 5e-3
 
 # MODEL = 'GAC'
 MODEL = 'RES10'
@@ -61,11 +66,16 @@ MODEL = 'RES10'
 # MODEL = 'DENSE201'
 # MODEL = 'XCEPTION'
 
-name_arg = [MODEL, 'mixup' + str(int(MIX_UP)), 'foc' + str(int(FOCAL)), 'weight' + str(int(USE_CLASS_WEIGHT)),
-			'decay' + str(DECAY)]
+name_arg = [MODEL,
+			'lr' + str(LR),
+			'bs'+str(BATCH_SIZE),
+			'l1_' + str(L1_WEIGHT),
+			'l2_' + str(DECAY),
+			'T1.5'
+			]
 
 # extra_name = ['onval']
-extra_name = ['sgd_bs'+str(BATCH_SIZE)]
+extra_name = ['cutout_crop']
 SCORE_THRESH = 0.89
 TEST_REPEAT = 10
 name_arg += extra_name
@@ -75,5 +85,5 @@ model_name = '_'.join(name_arg)
 # model_name = 'model_83173'; MODEL = 'GAC'  # GACNet cosine GP  L2 1e-2 MIXUP trained on train val 1:1  0.9163 A0.837
 # model_name = 'model_79740'; MODEL = 'GAC'  # GACNet cosine GP  L2 1.5e-2 FOCAL trained on train val 1:1 0.9307
 
-# model_name = 'RES10_mixup0_foc1_weight0_decay0.01_crop'
-# model_name = 'RES10_mixup0_foc0_weight0_decay0.01_crop'
+# model_name = 'RES10_mixup0_foc0_weight0_decay0.01_sgd_bs64'
+# model_name = 'RES10_mixup0_foc0_weight0_decay0.01_sgd_bs64_wd_all'

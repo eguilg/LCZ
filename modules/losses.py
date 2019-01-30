@@ -3,6 +3,43 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.modules.loss import _WeightedLoss, _Loss
 
+import math
+
+def cross_entropy_loss(input, target, reduction='mean'):
+
+	input = F.log_softmax(input, dim=1)
+	loss = -input * target
+	if reduction == 'none':
+		return loss
+	elif reduction == 'mean':
+		return loss.mean()
+	elif reduction == 'sum':
+		return loss.sum()
+	else:
+		raise ValueError('\'reduction\' must be one of \'none\', \'mean\' or \'sum\'')
+
+
+class SoftCE(_WeightedLoss):
+	__constants__ = ['weight', 'reduction']
+
+	def __init__(self, eps=1e-20, weight=None, size_average=None,
+				 reduce=None, reduction='mean'):
+		super(SoftCE, self).__init__(weight, size_average, reduce, reduction)
+		self.eps = eps
+
+	def forward(self, input, target):
+		if self.weight is not None:
+			sample_w = (target * self.weight[None, :]).sum(dim=-1)
+		else:
+			sample_w = 1
+
+		lable_entropy = 1 - (target * torch.log(target.clamp(min=self.eps))).sum(1) / math.log(1 / target.size(1))
+
+		ce = cross_entropy_loss(input, target, reduction='none')
+		ce = (sample_w * lable_entropy * ce.sum(-1)).mean()
+
+		return ce
+
 
 class FocalCE(_WeightedLoss):
 	__constants__ = ['weight', 'reduction']
@@ -21,8 +58,8 @@ class FocalCE(_WeightedLoss):
 		foc = torch.pow(torch.abs(F.softmax(input, -1) - target), self.lam)
 		# foc = (torch.abs(F.softmax(input, -1) - target) * self.lam).exp() - 1
 
-		nll = -(target * F.log_softmax(input, -1) + (1 - target) * torch.log(1 - F.softmax(input, -1)))
-		focal_loss = (sample_w * (foc * nll).sum(-1)).mean()
+		ce = cross_entropy_loss(input, target, reduction='none')
+		focal_loss = (sample_w * (foc * ce).sum(-1)).mean()
 
 		return focal_loss
 
@@ -69,7 +106,7 @@ class GHMC_Loss(_Loss):
 						self.acc_sum[i] = mmt * self.acc_sum[i] + \
 										  (1 - mmt) * num_in_bin_by_c
 					beta[inds] = epsilon / torch.mv(target[inds], self.acc_sum[i])
-					# n += torch.mv(target, (self.acc_sum[i] > 0).float())
+				# n += torch.mv(target, (self.acc_sum[i] > 0).float())
 				else:
 					beta[inds] = epsilon * tot[inds] / torch.mv(target[inds], num_in_bin_by_c)
 				n += torch.mv(target, (num_in_bin_by_c > 0).float())

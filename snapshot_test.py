@@ -18,7 +18,8 @@ BATCH_SIZE = 100
 
 model_dir = os.path.join(model_root, model_name)
 MODEL = model_name.split('_')[0]
-
+# extra = '_best_single'
+extra = ''
 models = [
 	'M_curr.ckpt',
 	'M_best.ckpt',
@@ -39,12 +40,13 @@ if not os.path.isdir(score_dir):
 	os.mkdir(score_dir)
 if __name__ == '__main__':
 
-	mean_std_h5 = h5py.File(mean_std_test_file, 'r')
-	mean = torch.from_numpy(np.array(mean_std_h5['mean'])).float().cuda()
-	std = torch.from_numpy(np.array(mean_std_h5['std'])).float().cuda()
-	mean_std_h5.close()
+	mean, std = None, None
+	if ZSCORE:
+		mean_std_h5 = h5py.File(mean_std_test_file, 'r')
+		mean = torch.from_numpy(np.array(mean_std_h5['mean'])).float().cuda()
+		std = torch.from_numpy(np.array(mean_std_h5['std'])).float().cuda()
+		mean_std_h5.close()
 
-	# mean, std = None, None
 
 	if MODEL == 'GAC':
 		group_sizes = [3, 3,
@@ -128,7 +130,7 @@ if __name__ == '__main__':
 	ensembled_pred = ensembled_score.argmax(-1)
 	submit = np.eye(17)[ensembled_pred.reshape(-1)]
 
-	np.savetxt(os.path.join(submit_dir, model_name + '.csv'), submit, delimiter=',', fmt='%d')
-	np.savetxt(os.path.join(score_dir, model_name + '.csv'), ensembled_score, delimiter=',', fmt='%.5f')
+	np.savetxt(os.path.join(submit_dir, model_name + extra + '.csv'), submit, delimiter=',', fmt='%d')
+	np.savetxt(os.path.join(score_dir, model_name + extra + '.csv'), ensembled_score, delimiter=',', fmt='%.5f')
 	print('completed!')
 	print('-' * 80)

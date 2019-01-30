@@ -19,6 +19,9 @@ from optim import LARSOptimizer
 
 from config import *
 
+T = 1.5
+ROUND = 6
+EPOCH = int(T * ROUND)
 N_SNAPSHOT = 6
 
 model_dir = osp.join(model_root, model_name)
@@ -51,20 +54,21 @@ def update_snapshot(state, snapshot_losses, prefix='M'):
 
 if __name__ == '__main__':
 
-	mean_std_h5_train = h5py.File(mean_std_train_file, 'r')
-	mean_train = torch.from_numpy(np.array(mean_std_h5_train['mean'])).float().cuda()
-	std_train = torch.from_numpy(np.array(mean_std_h5_train['std'])).float().cuda()
-	mean_std_h5_train.close()
+	mean, std = None, None
+	mean_val, std_val = None, None
+	if ZSCORE:
+		mean_std_h5_train = h5py.File(mean_std_train_file, 'r')
+		mean_train = torch.from_numpy(np.array(mean_std_h5_train['mean'])).float().cuda()
+		std_train = torch.from_numpy(np.array(mean_std_h5_train['std'])).float().cuda()
+		mean_std_h5_train.close()
 
-	mean_std_h5_val = h5py.File(mean_std_val_file, 'r')
-	mean_val = torch.from_numpy(np.array(mean_std_h5_val['mean'])).float().cuda()
-	std_val = torch.from_numpy(np.array(mean_std_h5_val['std'])).float().cuda()
-	mean_std_h5_val.close()
-	mean = torch.cat([mean_train[np.newaxis, :], mean_val[np.newaxis, :]], dim=0)
-	std = torch.cat([std_train[np.newaxis, :], std_val[np.newaxis, :]], dim=0)
+		mean_std_h5_val = h5py.File(mean_std_val_file, 'r')
+		mean_val = torch.from_numpy(np.array(mean_std_h5_val['mean'])).float().cuda()
+		std_val = torch.from_numpy(np.array(mean_std_h5_val['std'])).float().cuda()
+		mean_std_h5_val.close()
+		mean = torch.cat([mean_train[np.newaxis, :], mean_val[np.newaxis, :]], dim=0)
+		std = torch.cat([std_train[np.newaxis, :], std_val[np.newaxis, :]], dim=0)
 
-	# mean, std = None, None
-	# mean_val, std_val = None, None
 
 	# train val 合并再划分
 	# data_source = H5DataSource([train_file, val_file], BATCH_SIZE, split=0.07, seed=SEED)
@@ -155,29 +159,11 @@ if __name__ == '__main__':
 	else:
 		criteria = crit().cuda()
 
-	if NO_BN_WD:
-		params = [
-			{
-				'params': [
-					param for name, param in model.named_parameters()
-					if 'bn' not in name
-				]
-			},
-			{
-				'params': [
-					param for name, param in model.named_parameters()
-					if 'bn' in name
-				],
-				'weight_decay':
-					0
-			},
-		]
-	else:
-		params = model.parameters()
-	# optimizer = torch.optim.Adam(params, lr=LR, weight_decay=DECAY)
-	optimizer = torch.optim.SGD(params, lr=LR, weight_decay=DECAY)
+	params = model.parameters()
+	optimizer = torch.optim.Adam(params, lr=LR, weight_decay=DECAY)
+	# optimizer = torch.optim.SGD(params, lr=LR, weight_decay=DECAY)
 	# optimizer = LARSOptimizer(params, lr=LR, weight_decay=DECAY)
-	lr_scheduler = CosineAnnealingLR(optimizer, T_max=int(EPOCH * len(train_loader)), eta_min=0)
+	lr_scheduler = RestartCosineAnnealingLR(optimizer, T_max=int(T * len(train_loader)), eta_min=0)
 
 	snapshot_losses = []
 	for i in range(1, N_SNAPSHOT + 1):
@@ -258,9 +244,17 @@ if __name__ == '__main__':
 					train_out = model(train_input)
 					loss = criteria(train_out, train_target.max(-1)[1])
 
+				# l1 regularization
+				all_p = torch.cat([x.view(-1) for x in model.parameters()])
+				l1_regularization = torch.norm(all_p, 1) #/ all_p.size(0)
+				regularized_loss = loss + L1_WEIGHT * l1_regularization
+				regularized_loss.backward()
+
+				# loss.backward()
+
 				train_hit += (train_out.max(-1)[1] == train_target.max(-1)[1]).sum().item()
 
-				loss.backward()
+
 
 				torch.nn.utils.clip_grad_norm_(model.parameters(), 5)
 

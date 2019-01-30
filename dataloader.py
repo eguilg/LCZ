@@ -52,6 +52,16 @@ class SampledDataSorce(object):
 			print(self.node_class_weights)
 			print(self.class_weights)
 
+	def append_train(self, h5files, indices):
+		for i in range(len(indices)):
+			for j in range(len(indices[i])):
+				indices[i][j][0] += len(self.h5fids)
+
+		for i in range(len(self.h5file_indices)):
+			self.h5file_indices[i] += indices[i % len(indices)]
+
+		self.h5fids += h5files
+
 
 class H5DataSource(object):
 	def __init__(self, data_paths, batch_size, val_ratios=None, split=0.1, shuffle=True, seed=502):
