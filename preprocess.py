@@ -9,7 +9,7 @@ from torchvision import transforms
 from h5transform import *
 
 
-def preprocess_batch(x_b, mean=None, std=None):
+def preprocess_batch(x_b):
 	VH_ORG = x_b[:, :, :, :2]
 	VH_ORG_A = torch.norm(VH_ORG, dim=-1)[:, :, :, None]
 	VV_ORG = x_b[:, :, :, 2:4]
@@ -75,11 +75,6 @@ def preprocess_batch(x_b, mean=None, std=None):
 		INDICE_BANDS  # 2 4, 3, 3
 	], dim=-1)
 
-	if mean is not None and std is not None:
-		if len(mean.shape) == 2:
-			x_b = (x_b - mean[:, None, None, :]) / std[:, None, None, :]
-		else:
-			x_b = (x_b - mean[None, :]) / std[None, :]
 	return x_b
 
 
@@ -146,19 +141,21 @@ trans = transforms.Compose([
 
 
 def prepare_batch(x_b, y_b, f_idx=None, mean=None, std=None, aug=False):
-	if mean is not None and std is not None:
-		if len(mean.shape) == 2:
-			mean = mean[f_idx]
-			std = std[f_idx]
-
 	x_b = torch.from_numpy(x_b).float().cuda()
 
-	x_b = preprocess_batch(x_b, mean, std)
+	x_b = preprocess_batch(x_b)
 	x_b = x_b.permute(0, 3, 1, 2)  # bs nc h w
 
 	if aug:
 		x_b = data_aug_torch(x_b, trans)
 
+	if mean is not None and std is not None:
+		if len(mean.shape) == 2 and f_idx is not None:
+			mean = mean[f_idx]
+			std = std[f_idx]
+			x_b = (x_b - mean[:, None, None, :]) / std[:, None, None, :]
+		else:
+			x_b = (x_b - mean[None, :]) / std[None, :]
 
 	if y_b is not None:
 		y_b = torch.from_numpy(y_b).float().cuda()
