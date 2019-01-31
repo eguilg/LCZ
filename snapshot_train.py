@@ -14,15 +14,11 @@ from modules.lcz_dense_net import densenet121, densenet169, densenet201, densene
 from modules.lcz_xception import Xception
 from modules.lcz_senet import se_resnet10_fc512, se_resnet15_fc512
 from modules.scheduler import RestartCosineAnnealingLR, CosineAnnealingLR
-from modules.losses import FocalCE, GHMC_Loss, GHMC_Loss_ORG
+from modules.losses import FocalCE, GHMC_Loss, SoftCE
 from optim import LARSOptimizer
 
 from config import *
 
-T = 1.5
-ROUND = 6
-EPOCH = int(T * ROUND)
-N_SNAPSHOT = 6
 
 model_dir = osp.join(model_root, model_name)
 
@@ -69,7 +65,6 @@ if __name__ == '__main__':
 		mean = torch.cat([mean_train[np.newaxis, :], mean_val[np.newaxis, :]], dim=0)
 		std = torch.cat([std_train[np.newaxis, :], std_val[np.newaxis, :]], dim=0)
 
-
 	# train val 合并再划分
 	# data_source = H5DataSource([train_file, val_file], BATCH_SIZE, split=0.07, seed=SEED)
 	# train_loader = MyDataLoader(data_source.h5fids, data_source.train_indices)
@@ -98,8 +93,12 @@ if __name__ == '__main__':
 
 	# train val 固定比例 1:1
 	data_source = SampledDataSorce([train_file, val_file], BATCH_SIZE, sample_rate=[0.5, 0.5], seed=SEED)
+	if SEMI_SPV:
+		data_source_soft = H5DataSource([soft_labeld_data_file], int(BATCH_SIZE * 0.25), seed=SEED)
+		data_source.append_train(data_source_soft.h5fids, data_source_soft.indices)
 	train_loader = MyDataLoader(data_source.h5fids, data_source.train_indices)
 	val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
+
 
 	# train val 固定比例 1:7
 	# data_source = SampledDataSorce([train_file, val_file], BATCH_SIZE, sample_rate=[0.125, 0.875], seed=SEED)
@@ -149,10 +148,9 @@ if __name__ == '__main__':
 	print('num_params: %d' % (model_param_num))
 	if FOCAL:
 		crit = FocalCE
-	elif GHM:
-		crit = GHMC_Loss
+
 	else:
-		crit = nn.CrossEntropyLoss
+		crit = SoftCE
 
 	if USE_CLASS_WEIGHT:
 		criteria = crit(weight=class_weights).cuda()
@@ -237,24 +235,18 @@ if __name__ == '__main__':
 					train_out = model(train_input)
 					loss = mixup_criterion(criteria, train_out, y_1.max(-1)[1], y_2.max(-1)[1], lam)
 					train_target = lam * y_1 + (1 - lam) * y_2
-				elif FOCAL or GHM:
-					train_out = model(train_input)
-					loss = criteria(train_out, train_target)
 				else:
 					train_out = model(train_input)
-					loss = criteria(train_out, train_target.max(-1)[1])
+					loss = criteria(train_out, train_target)
 
 				# l1 regularization
-				all_p = torch.cat([x.view(-1) for x in model.parameters()])
-				l1_regularization = torch.norm(all_p, 1) #/ all_p.size(0)
+				l1_regularization = torch.norm(torch.cat([x.view(-1) for x in model.parameters()]), 1)
 				regularized_loss = loss + L1_WEIGHT * l1_regularization
 				regularized_loss.backward()
 
 				# loss.backward()
 
 				train_hit += (train_out.max(-1)[1] == train_target.max(-1)[1]).sum().item()
-
-
 
 				torch.nn.utils.clip_grad_norm_(model.parameters(), 5)
 
@@ -297,10 +289,8 @@ if __name__ == '__main__':
 						for val_data, val_label, f_idx_val in val_loader:
 							val_input, val_target = prepare_batch(val_data, val_label, f_idx_val, mean_val, std_val)
 							val_out = model(val_input)
-							if FOCAL or GHM:
-								val_loss_total += criteria(train_out, train_target).item()
-							else:
-								val_loss_total += criteria(val_out, val_target.max(-1)[1]).item()
+
+							val_loss_total += criteria(train_out, train_target).item()
 
 							val_hit += (val_out.max(-1)[1] == val_target.max(-1)[1]).sum().item()
 							val_sample += val_target.size()[0]

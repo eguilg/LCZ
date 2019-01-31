@@ -19,9 +19,9 @@ sen1 = np.concatenate([test_a_h5['sen1'],test_b_h5['sen1']], axis=0)
 sen2 = np.concatenate([test_a_h5['sen2'],test_b_h5['sen2']], axis=0)
 label = np.concatenate([test_a_score, test_b_score], axis=0)
 
-soft_label_dataset.create_dataset('sen1', data=sen1, compression="gzip")
-soft_label_dataset.create_dataset('sen2', data=sen2, compression="gzip")
-soft_label_dataset.create_dataset('label', data=label, compression="gzip")
+soft_label_dataset.create_dataset('sen1', data=sen1)
+soft_label_dataset.create_dataset('sen2', data=sen2)
+soft_label_dataset.create_dataset('label', data=label)
 
 
 test_a_h5.close()

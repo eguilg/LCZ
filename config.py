@@ -38,11 +38,12 @@ else:
 	submit_dir = osp.join(results_root, 'submit2_A')
 	score_dir = osp.join(results_root, 'score2_A')
 
+SEMI_SPV = True
 ZSCORE = False
 USE_CLASS_WEIGHT = False
 MIX_UP = False
 FOCAL = False
-GHM = False
+SOFT = True
 FINE_TUNE = False
 
 
@@ -51,6 +52,11 @@ EPOCH = 13
 BATCH_SIZE = 64
 MIX_UP_ALPHA = 1.0
 N_CHANNEL = 26
+
+T = 1.5
+ROUND = 6
+EPOCH = int(T * ROUND)
+N_SNAPSHOT = 6
 
 LR = 0.0001
 DECAY = 1e-2
@@ -71,11 +77,11 @@ name_arg = [MODEL,
 			'bs'+str(BATCH_SIZE),
 			'l1_' + str(L1_WEIGHT),
 			'l2_' + str(DECAY),
-			'T1.5'
+			'T' + str(T)
 			]
 
 # extra_name = ['onval']
-extra_name = ['cutout_crop']
+extra_name = ['cutout_crop_semi']
 SCORE_THRESH = 0.89
 TEST_REPEAT = 10
 name_arg += extra_name

@@ -22,10 +22,10 @@ def cross_entropy_loss(input, target, reduction='mean'):
 class SoftCE(_WeightedLoss):
 	__constants__ = ['weight', 'reduction']
 
-	def __init__(self, eps=1e-20, weight=None, size_average=None,
+	def __init__(self, lam=2, weight=None, size_average=None,
 				 reduce=None, reduction='mean'):
 		super(SoftCE, self).__init__(weight, size_average, reduce, reduction)
-		self.eps = eps
+		self.lam = lam
 
 	def forward(self, input, target):
 		if self.weight is not None:
@@ -33,10 +33,11 @@ class SoftCE(_WeightedLoss):
 		else:
 			sample_w = 1
 
-		lable_entropy = 1 - (target * torch.log(target.clamp(min=self.eps))).sum(1) / math.log(1 / target.size(1))
+		label_entropy = 1 - (target * torch.log(target.clamp(min=1e-20))).sum(1) / math.log(1 / target.size(1))
+		label_entropy = torch.pow(label_entropy, self.lam)
 
 		ce = cross_entropy_loss(input, target, reduction='none')
-		ce = (sample_w * lable_entropy * ce.sum(-1)).mean()
+		ce = (sample_w * label_entropy * ce.sum(-1)).mean()
 
 		return ce
 
