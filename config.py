@@ -81,7 +81,7 @@ name_arg = [MODEL,
 			]
 
 # extra_name = ['onval']
-extra_name = ['cutout_crop_semi']
+extra_name = ['semi']
 SCORE_THRESH = 0.89
 TEST_REPEAT = 10
 name_arg += extra_name

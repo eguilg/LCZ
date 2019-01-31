@@ -135,8 +135,8 @@ trans = transforms.Compose([
 	H5RandomHorizontalFlip(cuda=True),
 	H5RandomVerticalFlip(cuda=True),
 	H5RandomRotate(cuda=True),
-	H5RandomCrop(32, 4),
-	Cutout(8, 0.5)
+	# H5RandomCrop(32, 4),
+	# Cutout(8, 0.5)
 ])
 
 
