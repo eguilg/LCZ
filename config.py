@@ -21,11 +21,13 @@ testA_file = osp.join(data_root, 'round1_test_a_20181109.h5')
 testB_file = osp.join(data_root, 'round1_test_b_20190104.h5')  # 1B榜
 test2A_file = osp.join(data_root, 'round2_test_a_20190121.h5')
 test2B_file = osp.join(data_root, 'round2_test_b_20190121.h5')  # 2B榜
-mean_std_train_file = osp.join(data_root, 'mean_std_train.h5')
 
+mean_std_train_file = osp.join(data_root, 'mean_std_train.h5')
 mean_std_val_file = osp.join(data_root, 'mean_std_val.h5')
+mean_std_soft_label_file = osp.join(data_root, 'mean_std_soft.h5')
 mean_std_test2a_file = osp.join(data_root, 'mean_std_test2a.h5')
 mean_std_test2b_file = osp.join(data_root, 'mean_std_test2b.h5')
+
 
 if TEST_B:
 	test_file = test2B_file
@@ -39,7 +41,8 @@ else:
 	score_dir = osp.join(results_root, 'score2_A')
 
 SEMI_SPV = True
-ZSCORE = False
+ZSCORE = True
+CROP_CUTOUT = False
 USE_CLASS_WEIGHT = False
 MIX_UP = False
 FOCAL = False
@@ -81,7 +84,7 @@ name_arg = [MODEL,
 			]
 
 # extra_name = ['onval']
-extra_name = ['semi']
+extra_name = ['semi_norm']
 SCORE_THRESH = 0.89
 TEST_REPEAT = 10
 name_arg += extra_name

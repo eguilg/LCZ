@@ -7,6 +7,7 @@ from tqdm import tqdm
 from dataloader import H5DataSource, MyDataLoader
 from torchvision import transforms
 from h5transform import *
+from config import  *
 
 
 def preprocess_batch(x_b):
@@ -139,6 +140,15 @@ trans = transforms.Compose([
 	# Cutout(8, 0.5)
 ])
 
+if CROP_CUTOUT:
+	trans = transforms.Compose([
+		H5RandomHorizontalFlip(cuda=True),
+		H5RandomVerticalFlip(cuda=True),
+		H5RandomRotate(cuda=True),
+		# H5RandomCrop(32, 4),
+		# Cutout(8, 0.5)
+	])
+
 
 def prepare_batch(x_b, y_b, f_idx=None, mean=None, std=None, aug=False):
 	x_b = torch.from_numpy(x_b).float().cuda()
@@ -153,9 +163,9 @@ def prepare_batch(x_b, y_b, f_idx=None, mean=None, std=None, aug=False):
 		if len(mean.shape) == 2 and f_idx is not None:
 			mean = mean[f_idx]
 			std = std[f_idx]
-			x_b = (x_b - mean[:, None, None, :]) / std[:, None, None, :]
+			x_b = (x_b - mean[:, :, None, None]) / std[:, :, None, None]
 		else:
-			x_b = (x_b - mean[None, :]) / std[None, :]
+			x_b = (x_b - mean[None, :, None, None]) / std[None, :, None, None]
 
 	if y_b is not None:
 		y_b = torch.from_numpy(y_b).float().cuda()
@@ -184,7 +194,7 @@ def mixup_criterion(criterion, pred, y_a, y_b, lam):
 if __name__ == '__main__':
 	from config import *
 
-	init_data_source = H5DataSource([test_file], 5000, shuffle=False, split=False)
+	init_data_source = H5DataSource([soft_labeld_data_file], 5000, shuffle=False, split=False)
 	init_loader = MyDataLoader(init_data_source.h5fids, init_data_source.indices)
 	mean, std, n = 0, 0, 0
 	for data, label, _ in tqdm(init_loader):
@@ -206,7 +216,7 @@ if __name__ == '__main__':
 	mean = mean.detach().cpu().numpy()
 	print(mean)
 	print(std)
-	mean_std_h5 = h5py.File(mean_std_test_file, 'a')
+	mean_std_h5 = h5py.File(mean_std_soft_label_file, 'a')
 	mean_std_h5.create_dataset('mean', data=mean)
 	mean_std_h5.create_dataset('std', data=std)
 	mean_std_h5.close()

@@ -61,9 +61,14 @@ if __name__ == '__main__':
 		mean_std_h5_val = h5py.File(mean_std_val_file, 'r')
 		mean_val = torch.from_numpy(np.array(mean_std_h5_val['mean'])).float().cuda()
 		std_val = torch.from_numpy(np.array(mean_std_h5_val['std'])).float().cuda()
+
+		mean_std_h5_soft = h5py.File(mean_std_soft_label_file, 'r')
+		mean_soft = torch.from_numpy(np.array(mean_std_h5_soft['mean'])).float().cuda()
+		std_soft = torch.from_numpy(np.array(mean_std_h5_soft['std'])).float().cuda()
+
 		mean_std_h5_val.close()
-		mean = torch.cat([mean_train[np.newaxis, :], mean_val[np.newaxis, :]], dim=0)
-		std = torch.cat([std_train[np.newaxis, :], std_val[np.newaxis, :]], dim=0)
+		mean = torch.cat([mean_train[np.newaxis, :], mean_val[np.newaxis, :], mean_soft[np.newaxis, :]], dim=0)
+		std = torch.cat([std_train[np.newaxis, :], std_val[np.newaxis, :], mean_soft[np.newaxis, :]], dim=0)
 
 	# train val 合并再划分
 	# data_source = H5DataSource([train_file, val_file], BATCH_SIZE, split=0.07, seed=SEED)
