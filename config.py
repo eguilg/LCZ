@@ -41,7 +41,7 @@ else:
 	score_dir = osp.join(results_root, 'score2_A')
 
 SEMI_SPV = True
-ZSCORE = True
+ZSCORE = False
 CROP_CUTOUT = False
 USE_CLASS_WEIGHT = False
 MIX_UP = False
@@ -66,10 +66,10 @@ DECAY = 1e-2
 L1_WEIGHT = 0
 
 # MODEL = 'GAC'
-MODEL = 'RES10'
+# MODEL = 'RES10'
 # MODEL = 'RESW10'
 # MODEL = 'RES18'
-# MODEL = 'SE-RES10'
+MODEL = 'SE-RES10'
 # MODEL = 'SE-RES15'
 # MODEL = 'DENSE121'
 # MODEL = 'DENSE201'
@@ -84,7 +84,7 @@ name_arg = [MODEL,
 			]
 
 # extra_name = ['onval']
-extra_name = ['semi_norm']
+extra_name = ['semi_lam0']
 SCORE_THRESH = 0.89
 TEST_REPEAT = 10
 name_arg += extra_name
