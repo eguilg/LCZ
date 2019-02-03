@@ -372,3 +372,17 @@ def se_resnet15_fc512(in_channel, num_classes, **kwargs):
 	)
 
 	return model
+
+def se_resnet_ys(in_channel, num_classes, **kwargs):
+	model = SENet(
+		in_channel=in_channel,
+		num_classes=num_classes,
+		block=SEBottleneck,
+		layers=(8, 8, 8),
+		groups=32,
+		reduction=16,
+		dropout_p=0,
+		inplanes=64,
+		**kwargs
+	)
+	return model

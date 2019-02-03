@@ -10,9 +10,10 @@ from dataloader import MyDataLoader, H5DataSource, SampledDataSorce
 from preprocess import prepare_batch, mixup_data, mixup_criterion
 from modules.gac_net import GACNet
 from modules.lcz_res_net import resnet10, resnet18, resnet34, resnet50, resnet101
-from modules.lcz_dense_net import densenet121, densenet169, densenet201, densenet161
+from modules.lcz_dense_net import densenet_ys, densenet121, densenet169, densenet201, densenet161
 from modules.lcz_xception import Xception
-from modules.lcz_senet import se_resnet10_fc512, se_resnet15_fc512
+from modules.lcz_senet import se_resnet10_fc512, se_resnet15_fc512, se_resnet_ys
+from modules.resnext import resnext_ys
 from modules.scheduler import RestartCosineAnnealingLR, CosineAnnealingLR
 from modules.losses import FocalCE, GHMC_Loss, SoftCE
 from optim import LARSOptimizer
@@ -128,18 +129,22 @@ if __name__ == '__main__':
 		model = Xception(N_CHANNEL, 17)
 	elif MODEL == 'RES10':
 		model = resnet10(N_CHANNEL, 17)
-	elif MODEL == 'RESW10':
-		model = resnet10(N_CHANNEL, 17, first_kernel=5)
 	elif MODEL == 'RES18':
 		model = resnet18(N_CHANNEL, 17)
 	elif MODEL == 'SE-RES10':
 		model = se_resnet10_fc512(N_CHANNEL, 17)
 	elif MODEL == 'SE-RES15':
 		model = se_resnet15_fc512(N_CHANNEL, 17)
+	elif MODEL == 'SE-RES-YS':
+		model = se_resnet_ys(N_CHANNEL, 17)
+	elif MODEL == 'RESNEXT':
+		model = resnext_ys(N_CHANNEL, 17)
 	elif MODEL == 'DENSE121':
 		model = densenet121(N_CHANNEL, 17, drop_rate=0.3)
 	elif MODEL == 'DENSE201':
 		model = densenet201(N_CHANNEL, 17, drop_rate=0.3)
+	elif MODEL == 'DENSE-YS':
+		model = densenet_ys(N_CHANNEL, num_classes=17)
 	else:
 		group_sizes = [3, 3,
 					   3, 3, 2, 2,

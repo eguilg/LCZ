@@ -6,6 +6,12 @@ from .common_layers import *
 from .cbam import CBAM_Module
 from collections import OrderedDict
 
+def densenet_ys(in_channel=20, num_classes=17, drop_rate=0, **kwargs):
+	model = LCZDenseNet(in_channel=in_channel, num_classes=num_classes, drop_rate=drop_rate,
+						growth_rate=12, block_config=(16, 16, 16), compression=0.5,
+						num_init_features=24, bn_size=4, small_inputs=True, efficient=False,
+						**kwargs)
+	return model
 
 def densenet121(in_channel=20, num_classes=17, drop_rate=0, **kwargs):
 	r"""Densenet-121 model from
@@ -15,7 +21,7 @@ def densenet121(in_channel=20, num_classes=17, drop_rate=0, **kwargs):
 		pretrained (bool): If True, returns a model pre-trained on ImageNet
 	"""
 	model = LCZDenseNet(in_channel=in_channel, num_init_features=64, growth_rate=32, block_config=(6, 12, 24, 16),
-						drop_rate=drop_rate, n_class=num_classes,
+						drop_rate=drop_rate, num_classes=num_classes,
 						**kwargs)
 
 	return model
@@ -29,7 +35,7 @@ def densenet169(in_channel=20, num_classes=17, drop_rate=0, **kwargs):
 		pretrained (bool): If True, returns a model pre-trained on ImageNet
 	"""
 	model = LCZDenseNet(in_channel=in_channel, num_init_features=64, growth_rate=32, block_config=(6, 12, 32, 32),
-						drop_rate=drop_rate, n_class=num_classes,
+						drop_rate=drop_rate, num_classes=num_classes,
 						**kwargs)
 
 	return model
@@ -43,7 +49,7 @@ def densenet201(in_channel=20, num_classes=17, drop_rate=0, **kwargs):
 		pretrained (bool): If True, returns a model pre-trained on ImageNet
 	"""
 	model = LCZDenseNet(in_channel=in_channel, num_init_features=64, growth_rate=32, block_config=(6, 12, 48, 32),
-						drop_rate=drop_rate, n_class=num_classes,
+						drop_rate=drop_rate, num_classes=num_classes,
 						**kwargs)
 
 	return model
@@ -51,40 +57,45 @@ def densenet201(in_channel=20, num_classes=17, drop_rate=0, **kwargs):
 
 def densenet161(in_channel=20, num_classes=17, drop_rate=0, **kwargs):
 	model = LCZDenseNet(in_channel=in_channel, num_init_features=96, growth_rate=48, block_config=(6, 12, 36, 24),
-						drop_rate=drop_rate, n_class=num_classes,
+						drop_rate=drop_rate, num_classes=num_classes,
 						**kwargs)
 
 	return model
 
 
-class _DenseLayer(nn.Sequential):
-	def __init__(self, num_input_features, growth_rate, bn_size, drop_rate):
+def _bn_function_factory(norm, relu, conv):
+	def bn_function(*inputs):
+		concated_features = torch.cat(inputs, 1)
+		bottleneck_output = conv(relu(norm(concated_features)))
+		return bottleneck_output
+
+	return bn_function
+
+
+class _DenseLayer(nn.Module):
+	def __init__(self, num_input_features, growth_rate, bn_size, drop_rate, efficient=False):
 		super(_DenseLayer, self).__init__()
 		self.add_module('norm1', nn.BatchNorm2d(num_input_features)),
 		self.add_module('relu1', nn.ReLU(inplace=True)),
 		self.add_module('conv1', nn.Conv2d(num_input_features, bn_size *
 										   growth_rate, kernel_size=1, stride=1, bias=False)),
 		self.add_module('norm2', nn.BatchNorm2d(bn_size * growth_rate)),
-
-		# self.add_module('cbma1', CBAM_Module(bn_size * growth_rate, 8))
 		self.add_module('relu2', nn.ReLU(inplace=True)),
 		self.add_module('conv2', nn.Conv2d(bn_size * growth_rate, growth_rate,
 										   kernel_size=3, stride=1, padding=1, bias=False)),
 		self.drop_rate = drop_rate
+		self.efficient = efficient
 
-	def forward(self, x):
-		new_features = super(_DenseLayer, self).forward(x)
+	def forward(self, *prev_features):
+		bn_function = _bn_function_factory(self.norm1, self.relu1, self.conv1)
+		if self.efficient and any(prev_feature.requires_grad for prev_feature in prev_features):
+			bottleneck_output = cp.checkpoint(bn_function, *prev_features)
+		else:
+			bottleneck_output = bn_function(*prev_features)
+		new_features = self.conv2(self.relu2(self.norm2(bottleneck_output)))
 		if self.drop_rate > 0:
 			new_features = F.dropout(new_features, p=self.drop_rate, training=self.training)
-		return torch.cat([x, new_features], 1)
-
-
-class _DenseBlock(nn.Sequential):
-	def __init__(self, num_layers, num_input_features, bn_size, growth_rate, drop_rate):
-		super(_DenseBlock, self).__init__()
-		for i in range(num_layers):
-			layer = _DenseLayer(num_input_features + i * growth_rate, growth_rate, bn_size, drop_rate)
-			self.add_module('denselayer%d' % (i + 1), layer)
+		return new_features
 
 
 class _Transition(nn.Sequential):
@@ -97,59 +108,91 @@ class _Transition(nn.Sequential):
 		self.add_module('pool', nn.AvgPool2d(kernel_size=2, stride=2))
 
 
-class LCZDenseNet(nn.Module):
+class _DenseBlock(nn.Module):
+	def __init__(self, num_layers, num_input_features, bn_size, growth_rate, drop_rate, efficient=False):
+		super(_DenseBlock, self).__init__()
+		for i in range(num_layers):
+			layer = _DenseLayer(
+				num_input_features + i * growth_rate,
+				growth_rate=growth_rate,
+				bn_size=bn_size,
+				drop_rate=drop_rate,
+				efficient=efficient,
+			)
+			self.add_module('denselayer%d' % (i + 1), layer)
 
-	def __init__(self, in_channel=3, n_class=17, growth_rate=32, block_config=(6, 12, 24, 16),
-				 num_init_features=64, bn_size=4, drop_rate=0):
+	def forward(self, init_features):
+		features = [init_features]
+		for name, layer in self.named_children():
+			new_features = layer(*features)
+			features.append(new_features)
+		return torch.cat(features, 1)
+
+
+class LCZDenseNet(nn.Module):
+	def __init__(self, in_channel=26, growth_rate=12, block_config=(16, 16, 16), compression=0.5,
+				 num_init_features=24, bn_size=4, drop_rate=0,
+				 num_classes=17, small_inputs=True, efficient=False):
 
 		super(LCZDenseNet, self).__init__()
+		assert 0 < compression <= 1, 'compression of densenet should be between 0 and 1'
+		# self.avgpool_size = 8 if small_inputs else 7
+		self.avgpool_size = 8
 
 		# First convolution
-		self.features = nn.Sequential(OrderedDict([
-			('conv0', nn.Conv2d(in_channel, num_init_features, kernel_size=3, stride=1, padding=1, bias=False)),
-			('norm0', nn.BatchNorm2d(num_init_features)),
-			('relu0', nn.ReLU(inplace=True)),
-			('pool0', nn.MaxPool2d(kernel_size=3, stride=1, padding=1)),
-		]))
+		if small_inputs:
+			self.features = nn.Sequential(OrderedDict([
+				('conv0', nn.Conv2d(in_channel, num_init_features, kernel_size=3, stride=1, padding=1, bias=False)),
+			]))
+		else:
+			self.features = nn.Sequential(OrderedDict([
+				('conv0', nn.Conv2d(in_channel, num_init_features, kernel_size=7, stride=2, padding=3, bias=False)),
+			]))
+			self.features.add_module('norm0', nn.BatchNorm2d(num_init_features))
+			self.features.add_module('relu0', nn.ReLU(inplace=True))
+			self.features.add_module('pool0', nn.MaxPool2d(kernel_size=3, stride=2, padding=1,
+														   ceil_mode=False))
 
 		# Each denseblock
 		num_features = num_init_features
 		for i, num_layers in enumerate(block_config):
-			block = _DenseBlock(num_layers=num_layers, num_input_features=num_features,
-								bn_size=bn_size, growth_rate=growth_rate, drop_rate=drop_rate)
-
+			block = _DenseBlock(
+				num_layers=num_layers,
+				num_input_features=num_features,
+				bn_size=bn_size,
+				growth_rate=growth_rate,
+				drop_rate=drop_rate,
+				efficient=efficient,
+			)
 			self.features.add_module('denseblock%d' % (i + 1), block)
 			num_features = num_features + num_layers * growth_rate
-
 			if i != len(block_config) - 1:
-				trans = _Transition(num_input_features=num_features, num_output_features=num_features // 2)
+				trans = _Transition(num_input_features=num_features,
+									num_output_features=int(num_features * compression))
 				self.features.add_module('transition%d' % (i + 1), trans)
-				num_features = num_features // 2
+				num_features = int(num_features * compression)
 
 		# Final batch norm
-		self.features.add_module('norm5', nn.BatchNorm2d(num_features))
+		self.features.add_module('norm_final', nn.BatchNorm2d(num_features))
 
 		# Linear layer
-		# self.classifier = nn.Linear(num_features, num_classes)
-		# self.fc = nn.Conv2d(num_features, n_class, 4)
-		self.fc = nn.Sequential(nn.Conv2d(num_features, n_class, 1),
-								nn.AvgPool2d(4)
-								)
+		self.classifier = nn.Linear(num_features, num_classes)
 
-		# Official init from torch repo.
-		for m in self.modules():
-			if isinstance(m, nn.Conv2d):
-				nn.init.kaiming_normal_(m.weight.data)
-			elif isinstance(m, nn.BatchNorm2d):
-				m.weight.data.fill_(1)
-				m.bias.data.zero_()
-			elif isinstance(m, nn.Linear):
-				m.bias.data.zero_()
+		# Initialization
+		for name, param in self.named_parameters():
+			if 'conv' in name and 'weight' in name:
+				n = param.size(0) * param.size(2) * param.size(3)
+				param.data.normal_().mul_(math.sqrt(2. / n))
+			elif 'norm' in name and 'weight' in name:
+				param.data.fill_(1)
+			elif 'norm' in name and 'bias' in name:
+				param.data.fill_(0)
+			elif 'classifier' in name and 'bias' in name:
+				param.data.fill_(0)
 
 	def forward(self, x):
-		# x = x.transpose(2, 3).transpose(1, 2)  # b channel s s
 		features = self.features(x)
 		out = F.relu(features, inplace=True)
-		# out = F.avg_pool2d(out, kernel_size=4, stride=1).view(features.size(0), -1)
-		out = self.fc(out).view(out.size(0), -1)
+		out = F.avg_pool2d(out, kernel_size=self.avgpool_size).view(features.size(0), -1)
+		out = self.classifier(out)
 		return out
