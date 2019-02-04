@@ -100,8 +100,12 @@ if __name__ == '__main__':
 	# train val 固定比例 1:1
 	data_source = SampledDataSorce([train_file, val_file], BATCH_SIZE, sample_rate=[0.5, 0.5], seed=SEED)
 	if SEMI_SPV:
-		data_source_soft = H5DataSource([soft_labeld_data_file], int(BATCH_SIZE * 0.25), seed=SEED)
-		data_source.append_train(data_source_soft.h5fids, data_source_soft.indices)
+		data_source_soft_a = H5DataSource([soft_a_path], int(BATCH_SIZE * 0.125), seed=SEED)
+		data_source.append_train(data_source_soft_a.h5fids, data_source_soft_a.indices)
+		data_source_soft_b = H5DataSource([soft_b_path], int(BATCH_SIZE * 0.125), seed=SEED)
+		data_source.append_train(data_source_soft_b.h5fids, data_source_soft_b.indices)
+		data_source_soft_2a = H5DataSource([soft_2a_path], int(BATCH_SIZE * 0.125), seed=SEED)
+		data_source.append_train(data_source_soft_2a.h5fids, data_source_soft_2a.indices)
 	train_loader = MyDataLoader(data_source.h5fids, data_source.train_indices)
 	val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
 

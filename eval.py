@@ -20,7 +20,7 @@ from config import *
 model_dir = osp.join(model_root, model_name)
 # model_dir = './checkpoints/RES10_mixup0_foc0_weight0_decay0.01_draft'
 
-cur_model_path = os.path.join(model_dir, 'M_best.ckpt')
+cur_model_path = os.path.join(model_dir, 'M_1.ckpt')
 # cur_model_path = os.path.join(model_dir, 'state_curr.ckpt')
 
 if not os.path.isdir('./evaluate/'):

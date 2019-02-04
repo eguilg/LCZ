@@ -14,8 +14,10 @@ else:
 
 train_file = osp.join(data_root, 'training.h5')
 val_file = osp.join(data_root, 'validation.h5')
-soft_labeld_data_file = osp.join(data_root, 'soft_labeled_data.h5')
-
+soft_labeld_data_file = osp.join(data_root, 'soft_labeled_data_3t.h5')
+soft_a_path = osp.join(data_root, 'soft_a.h5')
+soft_b_path = osp.join(data_root, 'soft_b.h5')
+soft_2a_path = osp.join(data_root, 'soft_2a.h5')
 
 testA_file = osp.join(data_root, 'round1_test_a_20181109.h5')
 testB_file = osp.join(data_root, 'round1_test_b_20190104.h5')  # 1B榜
@@ -68,11 +70,11 @@ L1_WEIGHT = 0
 # MODEL = 'GAC'
 # MODEL = 'RES10'
 # MODEL = 'RESW10'
-# MODEL = 'RES18'
+MODEL = 'RES18'
 # MODEL = 'SE-RES10'
 # MODEL = 'SE-RES15'
 # MODEL = 'SE-RES-YS'
-MODEL = 'RESNEXT'
+# MODEL = 'RESNEXT'
 # MODEL = 'DENSE121'
 # MODEL = 'DENSE201'
 # MODEL = 'DENSE-YS'
@@ -87,7 +89,7 @@ name_arg = [MODEL,
 			]
 
 # extra_name = ['onval']
-extra_name = ['semi_lam0']
+extra_name = ['semi3t_lam0']
 SCORE_THRESH = 0.89
 TEST_REPEAT = 10
 name_arg += extra_name
