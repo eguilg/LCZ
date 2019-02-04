@@ -5,8 +5,9 @@ TEST_B = False
 
 if LOCAL:
 	model_root = './checkpoints'
-	data_root = '/home/zydq/Datasets/LCZ/'
-	results_root = './'
+	# data_root = '/home/zydq/Datasets/LCZ/'
+	data_root = '/data/pzq/tianchi/data/'
+	results_root = './results'
 else:
 	model_root = '../checkpoints'
 	data_root = '/nas/LCZ/'
@@ -70,10 +71,10 @@ L1_WEIGHT = 0
 # MODEL = 'GAC'
 # MODEL = 'RES10'
 # MODEL = 'RESW10'
-MODEL = 'RES18'
+# MODEL = 'RES18'
 # MODEL = 'SE-RES10'
 # MODEL = 'SE-RES15'
-# MODEL = 'SE-RES-YS'
+MODEL = 'SE-RES-YS'
 # MODEL = 'RESNEXT'
 # MODEL = 'DENSE121'
 # MODEL = 'DENSE201'

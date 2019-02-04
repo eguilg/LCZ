@@ -250,16 +250,16 @@ class SENet(nn.Module):
 			downsample_kernel_size=downsample_kernel_size,
 			downsample_padding=downsample_padding
 		)
-		self.layer4 = self._make_layer(
-			block,
-			planes=512,
-			blocks=layers[3],
-			stride=last_stride,
-			groups=groups,
-			reduction=reduction,
-			downsample_kernel_size=downsample_kernel_size,
-			downsample_padding=downsample_padding
-		)
+		# self.layer4 = self._make_layer(
+		# 	block,
+		# 	planes=512,
+		# 	blocks=layers[3],
+		# 	stride=last_stride,
+		# 	groups=groups,
+		# 	reduction=reduction,
+		# 	downsample_kernel_size=downsample_kernel_size,
+		# 	downsample_padding=downsample_padding
+		# )
 
 		self.global_avgpool = nn.AdaptiveAvgPool2d(1)
 		self.fc = self._construct_fc_layer(fc_dims, 512 * block.expansion, dropout_p)
@@ -319,7 +319,7 @@ class SENet(nn.Module):
 		x = self.layer1(x)
 		x = self.layer2(x)
 		x = self.layer3(x)
-		x = self.layer4(x)
+		# x = self.layer4(x)
 		return x
 
 	def forward(self, x):
