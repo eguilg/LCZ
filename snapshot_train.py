@@ -6,7 +6,7 @@ from tqdm import tqdm
 import torch
 import torch.nn as nn
 import numpy as np
-from dataloader import MyDataLoader, H5DataSource, SampledDataSorce
+from dataloader import MyDataLoader, H5DataSource, SampledDataSorce, TestFakeDataSource
 from preprocess import prepare_batch, mixup_data, mixup_criterion
 from modules.gac_net import GACNet
 from modules.lcz_res_net import resnet10, resnet18, resnet34, resnet50, resnet101
@@ -100,12 +100,10 @@ if __name__ == '__main__':
 	# train val 固定比例 1:1
 	data_source = SampledDataSorce([train_file, val_file], BATCH_SIZE, sample_rate=[0.5, 0.5], seed=SEED)
 	if SEMI_SPV:
-		data_source_soft_a = H5DataSource([soft_a_path], int(BATCH_SIZE * 0.125), seed=SEED)
-		data_source.append_train(data_source_soft_a.h5fids, data_source_soft_a.indices)
-		data_source_soft_b = H5DataSource([soft_b_path], int(BATCH_SIZE * 0.125), seed=SEED)
-		data_source.append_train(data_source_soft_b.h5fids, data_source_soft_b.indices)
-		data_source_soft_2a = H5DataSource([soft_2a_path], int(BATCH_SIZE * 0.125), seed=SEED)
-		data_source.append_train(data_source_soft_2a.h5fids, data_source_soft_2a.indices)
+		data_source_soft = TestFakeDataSource([soft_a_path, soft_b_path, soft_2a_path], batch_size=BATCH_SIZE*0.375, thresh=0, one_hot=True)
+		# data_source_soft = TestFakeDataSource([soft_a_path, soft_b_path, soft_2a_path], batch_size=BATCH_SIZE * 375, thresh=0,
+		# 									  one_hot=False)
+		data_source.append_train(data_source_soft.data, data_source_soft.indices)
 	train_loader = MyDataLoader(data_source.h5fids, data_source.train_indices)
 	val_loader = MyDataLoader(data_source.h5fids, data_source.val_indices)
 

@@ -61,6 +61,36 @@ class SampledDataSorce(object):
 
 		self.h5fids += h5files
 
+class TestFakeDataSource(object):
+	def __init__(self, data_paths, batch_size, thresh=0, one_hot=False, seed=502):
+		self.data = [{
+			'sen1':[],
+			'sen2': [],
+			'label': []
+		}]
+		for path in data_paths:
+			h5file = h5py.File(path, 'r')
+			label = np.array(h5file['label'])
+			filter_idx = label.max(-1) >= thresh
+			label = label[filter_idx]
+			if one_hot:
+				label = np.eye(label.shape[-1])[label.argmax(-1).reshape(-1)]
+			sen1 = np.array(h5file['sen1'])[filter_idx]
+			sen2 = np.array(h5file['sen2'])[filter_idx]
+			self.data[0]['sen1'].append(sen1)
+			self.data[0]['sen2'].append(sen2)
+			self.data[0]['label'].append(label)
+		self.data[0]['sen1'] = np.concatenate(self.data[0]['sen1'], axis=0)
+		self.data[0]['sen2'] = np.concatenate(self.data[0]['sen2'], axis=0)
+		self.data[0]['label'] = np.concatenate(self.data[0]['label'], axis=0)
+
+		self.batch_nums = [int(fid['sen1'].shape[0] / batch_size) + 1 for fid in self.data]
+		self.indices = [(fid,
+						 int(batch_id * batch_size),
+						int(min((batch_id + 1) * batch_size, self.data[fid]['sen1'].shape[0])))
+						for fid in range(len(self.data)) for batch_id in range(self.batch_nums[fid])]
+		np.random.seed(seed)
+		np.random.shuffle(self.indices)
 
 class H5DataSource(object):
 	def __init__(self, data_paths, batch_size, val_ratios=None, split=0.1, shuffle=True, seed=502):
@@ -151,6 +181,7 @@ class _MyDataIter(object):
 		for (f_idx, b_start, b_end) in next_batch:
 
 			h5fid = self.h5fids[f_idx]
+
 			if 'label' in h5fid.keys():
 				y_b.append(np.array(h5fid['label'][b_start: b_end]))
 			x_b.append(np.array(
