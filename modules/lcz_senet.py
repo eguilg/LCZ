@@ -146,61 +146,61 @@ class SENet(nn.Module):
 	Hu et al. Squeeze-and-Excitation Networks. CVPR 2018.
 	"""
 
-	def __init__(self, in_channel, num_classes, block, layers, groups, reduction, dropout_p=0.2,
-				 inplanes=128, input_3x3=True, downsample_kernel_size=3, downsample_padding=1,
-				 last_stride=2, fc_dims=None, **kwargs):
+	def __init__(self, in_channel, block, layers, groups, reduction, dropout_p=0.2,
+				 inplanes=128, input_3x3=True, downsample_kernel_size=3,
+				 downsample_padding=1, num_classes=17):
 		"""
-		Parameters
-		----------
-		block (nn.Module): Bottleneck class.
-			- For SENet154: SEBottleneck
-			- For SE-ResNet models: SEResNetBottleneck
-			- For SE-ResNeXt models:  SEResNeXtBottleneck
-		layers (list of ints): Number of residual blocks for 4 layers of the
-			network (layer1...layer4).
-		groups (int): Number of groups for the 3x3 convolution in each
-			bottleneck block.
-			- For SENet154: 64
-			- For SE-ResNet models: 1
-			- For SE-ResNeXt models:  32
-		reduction (int): Reduction ratio for Squeeze-and-Excitation modules.
-			- For all models: 16
-		dropout_p (float or None): Drop probability for the Dropout layer.
-			If `None` the Dropout layer is not used.
-			- For SENet154: 0.2
-			- For SE-ResNet models: None
-			- For SE-ResNeXt models: None
-		inplanes (int):  Number of input channels for layer1.
-			- For SENet154: 128
-			- For SE-ResNet models: 64
-			- For SE-ResNeXt models: 64
-		input_3x3 (bool): If `True`, use three 3x3 convolutions instead of
-			a single 7x7 convolution in layer0.
-			- For SENet154: True
-			- For SE-ResNet models: False
-			- For SE-ResNeXt models: False
-		downsample_kernel_size (int): Kernel size for downsampling convolutions
-			in layer2, layer3 and layer4.
-			- For SENet154: 3
-			- For SE-ResNet models: 1
-			- For SE-ResNeXt models: 1
-		downsample_padding (int): Padding for downsampling convolutions in
-			layer2, layer3 and layer4.
-			- For SENet154: 1
-			- For SE-ResNet models: 0
-			- For SE-ResNeXt models: 0
-		num_classes (int): Number of outputs in `classifier` layer.
-		"""
+        Parameters
+        ----------
+        block (nn.Module): Bottleneck class.
+            - For SENet154: SEBottleneck
+            - For SE-ResNet models: SEResNetBottleneck
+            - For SE-ResNeXt models:  SEResNeXtBottleneck
+        layers (list of ints): Number of residual blocks for 4 layers of the
+            network (layer1...layer4).
+        groups (int): Number of groups for the 3x3 convolution in each
+            bottleneck block.
+            - For SENet154: 64
+            - For SE-ResNet models: 1
+            - For SE-ResNeXt models:  32
+        reduction (int): Reduction ratio for Squeeze-and-Excitation modules.
+            - For all models: 16
+        dropout_p (float or None): Drop probability for the Dropout layer.
+            If `None` the Dropout layer is not used.
+            - For SENet154: 0.2
+            - For SE-ResNet models: None
+            - For SE-ResNeXt models: None
+        inplanes (int):  Number of input channels for layer1.
+            - For SENet154: 128
+            - For SE-ResNet models: 64
+            - For SE-ResNeXt models: 64
+        input_3x3 (bool): If `True`, use three 3x3 convolutions instead of
+            a single 7x7 convolution in layer0.
+            - For SENet154: True
+            - For SE-ResNet models: False
+            - For SE-ResNeXt models: False
+        downsample_kernel_size (int): Kernel size for downsampling convolutions
+            in layer2, layer3 and layer4.
+            - For SENet154: 3
+            - For SE-ResNet models: 1
+            - For SE-ResNeXt models: 1
+        downsample_padding (int): Padding for downsampling convolutions in
+            layer2, layer3 and layer4.
+            - For SENet154: 1
+            - For SE-ResNet models: 0
+            - For SE-ResNeXt models: 0
+        num_classes (int): Number of outputs in `last_linear` layer.
+            - For all models: 1000
+        """
 		super(SENet, self).__init__()
 		self.inplanes = inplanes
-
 		if input_3x3:
 			layer0_modules = [
-				('conv1', nn.Conv2d(in_channel, 64, 3, stride=1, padding=1,
+				('conv1', nn.Conv2d(in_channel, 32, 3, stride=1, padding=1,
 									bias=False)),
-				('bn1', nn.BatchNorm2d(64)),
+				('bn1', nn.BatchNorm2d(32)),
 				('relu1', nn.ReLU(inplace=True)),
-				('conv2', nn.Conv2d(64, 64, 3, stride=1, padding=1,
+				('conv2', nn.Conv2d(32, 64, 3, stride=1, padding=1,
 									bias=False)),
 				('bn2', nn.BatchNorm2d(64)),
 				('relu2', nn.ReLU(inplace=True)),
@@ -211,15 +211,15 @@ class SENet(nn.Module):
 			]
 		else:
 			layer0_modules = [
-				('conv1', nn.Conv2d(in_channel, inplanes, kernel_size=7, stride=1,
-									padding=3, bias=False)),
+				('conv1', nn.Conv2d(in_channel, inplanes, kernel_size=3, stride=1,
+									padding=1, bias=False)),
 				('bn1', nn.BatchNorm2d(inplanes)),
 				('relu1', nn.ReLU(inplace=True)),
 			]
 		# To preserve compatibility with Caffe weights `ceil_mode=True`
 		# is used instead of `padding=1`.
-		layer0_modules.append(('pool', nn.MaxPool2d(3, stride=2,
-													ceil_mode=True)))
+		# layer0_modules.append(('pool', nn.MaxPool2d(3, stride=2,
+		#                                             ceil_mode=True)))
 		self.layer0 = nn.Sequential(OrderedDict(layer0_modules))
 		self.layer1 = self._make_layer(
 			block,
@@ -234,7 +234,7 @@ class SENet(nn.Module):
 			block,
 			planes=128,
 			blocks=layers[1],
-			stride=1,
+			stride=2,
 			groups=groups,
 			reduction=reduction,
 			downsample_kernel_size=downsample_kernel_size,
@@ -244,26 +244,43 @@ class SENet(nn.Module):
 			block,
 			planes=256,
 			blocks=layers[2],
-			stride=1,
+			stride=2,
 			groups=groups,
 			reduction=reduction,
 			downsample_kernel_size=downsample_kernel_size,
 			downsample_padding=downsample_padding
 		)
 		# self.layer4 = self._make_layer(
-		# 	block,
-		# 	planes=512,
-		# 	blocks=layers[3],
-		# 	stride=last_stride,
-		# 	groups=groups,
-		# 	reduction=reduction,
-		# 	downsample_kernel_size=downsample_kernel_size,
-		# 	downsample_padding=downsample_padding
+		#     block,
+		#     planes=512,
+		#     blocks=layers[3],
+		#     stride=2,
+		#     groups=groups,
+		#     reduction=reduction,
+		#     downsample_kernel_size=downsample_kernel_size,
+		#     downsample_padding=downsample_padding
 		# )
+		self.avg_pool = nn.AvgPool2d(8, stride=1)
+		self.dropout = nn.Dropout(dropout_p) if dropout_p is not None else None
+		self.last_linear = nn.Linear(256 * block.expansion, num_classes)
 
-		self.global_avgpool = nn.AdaptiveAvgPool2d(1)
-		self.fc = self._construct_fc_layer(fc_dims, 512 * block.expansion, dropout_p)
-		self.classifier = nn.Linear(self.feature_dim, num_classes)
+		# for name, param in self.named_parameters():
+		#     if 'conv' in name and 'weight' in name:
+		#         n = param.size(0) * param.size(2) * param.size(3)
+		#         param.data.normal_().mul_(math.sqrt(2. / n))
+		#     elif 'norm' in name and 'weight' in name:
+		#         param.data.fill_(1)
+		#     elif 'norm' in name and 'bias' in name:
+		#         param.data.fill_(0)
+		#     elif 'classifier' in name and 'bias' in name:
+		#         param.data.fill_(0)
+		for m in self.modules():
+			if isinstance(m, nn.Conv2d):
+				n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+				m.weight.data.normal_(0, math.sqrt(2. / n))
+			elif isinstance(m, nn.BatchNorm2d):
+				m.weight.data.fill_(1)
+				m.bias.data.zero_()
 
 	def _make_layer(self, block, planes, blocks, groups, reduction, stride=1,
 					downsample_kernel_size=1, downsample_padding=0):
@@ -285,36 +302,7 @@ class SENet(nn.Module):
 
 		return nn.Sequential(*layers)
 
-	def _construct_fc_layer(self, fc_dims, input_dim, dropout_p=None):
-		"""
-		Construct fully connected layer
-
-		- fc_dims (list or tuple): dimensions of fc layers, if None,
-								   no fc layers are constructed
-		- input_dim (int): input dimension
-		- dropout_p (float): dropout probability, if None, dropout is unused
-		"""
-		if fc_dims is None:
-			self.feature_dim = input_dim
-			return None
-
-		assert isinstance(fc_dims, (list, tuple)), "fc_dims must be either list or tuple, but got {}".format(
-			type(fc_dims))
-
-		layers = []
-		for dim in fc_dims:
-			layers.append(nn.Linear(input_dim, dim))
-			layers.append(nn.BatchNorm1d(dim))
-			layers.append(nn.ReLU(inplace=True))
-			if dropout_p is not None:
-				layers.append(nn.Dropout(p=dropout_p))
-			input_dim = dim
-
-		self.feature_dim = fc_dims[-1]
-
-		return nn.Sequential(*layers)
-
-	def featuremaps(self, x):
+	def features(self, x):
 		x = self.layer0(x)
 		x = self.layer1(x)
 		x = self.layer2(x)
@@ -322,14 +310,18 @@ class SENet(nn.Module):
 		# x = self.layer4(x)
 		return x
 
-	def forward(self, x):
-		f = self.featuremaps(x)
-		v = self.global_avgpool(f)
-		v = v.view(v.size(0), -1)
-		v = self.fc(v)
-		y = self.classifier(v)
+	def logits(self, x):
+		x = self.avg_pool(x)
+		if self.dropout is not None:
+			x = self.dropout(x)
+		x = x.view(x.size(0), -1)
+		x = self.last_linear(x)
+		return x
 
-		return y
+	def forward(self, x):
+		x = self.features(x)
+		x = self.logits(x)
+		return x
 
 
 def se_resnet10_fc512(in_channel, num_classes, **kwargs):
@@ -345,8 +337,6 @@ def se_resnet10_fc512(in_channel, num_classes, **kwargs):
 		input_3x3=False,
 		downsample_kernel_size=1,
 		downsample_padding=0,
-		last_stride=1,
-		fc_dims=[512],
 		**kwargs
 	)
 
@@ -366,8 +356,6 @@ def se_resnet15_fc512(in_channel, num_classes, **kwargs):
 		input_3x3=False,
 		downsample_kernel_size=1,
 		downsample_padding=0,
-		last_stride=1,
-		fc_dims=[512],
 		**kwargs
 	)
 
