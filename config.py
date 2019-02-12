@@ -1,6 +1,6 @@
 import os.path as osp
 
-LOCAL = False
+LOCAL = True
 TEST_B = False
 
 if LOCAL:
@@ -19,11 +19,12 @@ soft_labeld_data_file = osp.join(data_root, 'soft_labeled_data_3t.h5')
 soft_a_path = osp.join(data_root, 'soft_a.h5')
 soft_b_path = osp.join(data_root, 'soft_b.h5')
 soft_2a_path = osp.join(data_root, 'soft_2a.h5')
+soft_2b_path = osp.join(data_root, 'soft_2b.h5')
 
 testA_file = osp.join(data_root, 'round1_test_a_20181109.h5')
 testB_file = osp.join(data_root, 'round1_test_b_20190104.h5')  # 1B榜
 test2A_file = osp.join(data_root, 'round2_test_a_20190121.h5')
-test2B_file = osp.join(data_root, 'round2_test_b_20190121.h5')  # 2B榜
+test2B_file = osp.join(data_root, 'round2_test_b_20190211.h5')  # 2B榜
 
 mean_std_train_file = osp.join(data_root, 'mean_std_train.h5')
 mean_std_val_file = osp.join(data_root, 'mean_std_val.h5')
@@ -68,14 +69,14 @@ LR = 0.0001
 DECAY = 1e-2
 L1_WEIGHT = 0
 
-MODEL = 'GAC'
-# MODEL = 'RES10'
+# MODEL = 'GAC'
+MODEL = 'RES10'
 # MODEL = 'RESW10'
-# MODEL = 'RES18'
+MODEL = 'RES18'
 # MODEL = 'SE-RES10'
 # MODEL = 'SE-RES15'
 # MODEL = 'SE-RES-YS'
-# MODEL = 'RESNEXT'
+MODEL = 'RESNEXT'
 # MODEL = 'DENSE121'
 # MODEL = 'DENSE201'
 # MODEL = 'DENSE-YS'
@@ -90,7 +91,7 @@ name_arg = [MODEL,
 			]
 
 # extra_name = ['onval']
-extra_name = ['semi3t_onehot_lam0']
+extra_name = ['semi4t_lam0']
 SCORE_THRESH = 0.89
 TEST_REPEAT = 10
 name_arg += extra_name
@@ -100,5 +101,16 @@ model_name = '_'.join(name_arg)
 # model_name = 'model_83173'; MODEL = 'GAC'  # GACNet cosine GP  L2 1e-2 MIXUP trained on train val 1:1  0.9163 A0.837
 # model_name = 'model_79740'; MODEL = 'GAC'  # GACNet cosine GP  L2 1.5e-2 FOCAL trained on train val 1:1 0.9307
 
-# model_name = 'RES10_mixup0_foc0_weight0_decay0.01_sgd_bs64'
-# model_name = 'RES10_mixup0_foc0_weight0_decay0.01_sgd_bs64_wd_all'
+
+# model_name = 'GAC_lr0.0001_bs64_l1_0_l2_0.01_T1.5_semi2t_th0.8_lam0' # na
+# model_name = 'GAC_lr0.0001_bs64_l1_0_l2_0.01_T1.5_semi3t_lam0'
+# model_name = 'GAC_lr0.0001_bs64_l1_0_l2_0.01_T1.5_semi3t_onehot_lam0'
+# model_name = 'RES10_lr0.0001_bs64_l1_0_l2_0.01_T1.5_semi2t_th0.8_lam0'
+# model_name = 'RES10_lr0.0001_bs64_l1_0_l2_0.01_T1.5_semi3t_lam0'
+# model_name = 'RES10_lr0.0001_bs64_l1_0_l2_0.01_T1.5_semi3t_onehot_lam0'
+# model_name = 'RES18_lr0.0001_bs64_l1_0_l2_0.01_T1.5_semi2t_th0.8_lam0'
+# model_name = 'RES18_lr0.0001_bs64_l1_0_l2_0.01_T1.5_semi3t_lam0'
+# model_name = 'RES18_lr0.0001_bs64_l1_0_l2_0.01_T1.5_semi3t_onehot_lam0'
+# model_name = 'RESNEXT_lr0.0001_bs64_l1_0_l2_0.01_T1.5_semi2t_th0.8_lam0'
+# model_name = 'RESNEXT_lr0.0001_bs64_l1_0_l2_0.01_T1.5_semi3t_lam0'
+# model_name = 'RESNEXT_lr0.0001_bs64_l1_0_l2_0.01_T1.5_semi3t_onehot_lam0'
