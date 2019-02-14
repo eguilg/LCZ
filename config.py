@@ -1,21 +1,36 @@
 import os.path as osp
 
-LOCAL = True
-TEST_B = False
+model_root = 'path/to/model/root'
+data_root = '/path/to/data/root'
+results_root = '/path/to/result/root'
+test_file = '/path/to/test/file'
 
-if LOCAL:
-	model_root = './checkpoints'
-	# data_root = '/home/zydq/Datasets/LCZ/'
-	data_root = '/data/pzq/tianchi/data/'
-	results_root = './results'
-else:
-	model_root = '../checkpoints'
-	data_root = '/nas/LCZ/'
-	results_root = '../results/'
+
+submit_dir = osp.join(results_root, 'submit')
+score_dir = osp.join(results_root, 'score')
+
+# LOCAL = True
+# TEST_B = True
+
+# if LOCAL:
+# 	model_root = './checkpoints'
+# 	# data_root = '/home/zydq/Datasets/LCZ/'
+# 	data_root = '/data/pzq/tianchi/data/'
+# 	results_root = './results'
+# else:
+# 	model_root = '../checkpoints'
+# 	data_root = '/nas/LCZ/'
+# 	results_root = '../results/'
+
+
+# model_root = './checkpoints'
+# # data_root = '/home/zydq/Datasets/LCZ/'
+# data_root = '/data/pzq/tianchi/data/'
+# results_root = './results'
+# test_file =  osp.join(data_root, 'round2_test_b_20190211.h5')
 
 train_file = osp.join(data_root, 'training.h5')
 val_file = osp.join(data_root, 'validation.h5')
-soft_labeld_data_file = osp.join(data_root, 'soft_labeled_data_3t.h5')
 soft_a_path = osp.join(data_root, 'soft_a.h5')
 soft_b_path = osp.join(data_root, 'soft_b.h5')
 soft_2a_path = osp.join(data_root, 'soft_2a.h5')
@@ -33,16 +48,16 @@ mean_std_test2a_file = osp.join(data_root, 'mean_std_test2a.h5')
 mean_std_test2b_file = osp.join(data_root, 'mean_std_test2b.h5')
 
 
-if TEST_B:
-	test_file = test2B_file
-	mean_std_test_file = mean_std_test2b_file
-	submit_dir = osp.join(results_root, 'submit2_B')
-	score_dir = osp.join(results_root, 'score2_B')
-else:
-	test_file = test2A_file
-	mean_std_test_file = mean_std_test2a_file
-	submit_dir = osp.join(results_root, 'submit2_A')
-	score_dir = osp.join(results_root, 'score2_A')
+# if TEST_B:
+# 	test_file = test2B_file
+# 	mean_std_test_file = mean_std_test2b_file
+# 	submit_dir = osp.join(results_root, 'submit2_B')
+# 	score_dir = osp.join(results_root, 'score2_B')
+# else:
+# 	test_file = test2A_file
+# 	mean_std_test_file = mean_std_test2a_file
+# 	submit_dir = osp.join(results_root, 'submit')
+# 	score_dir = osp.join(results_root, 'score2_A')
 
 SEMI_SPV = True
 ZSCORE = False
@@ -93,14 +108,9 @@ name_arg = [MODEL,
 # extra_name = ['onval']
 extra_name = ['semi4t_lam0']
 SCORE_THRESH = 0.89
-TEST_REPEAT = 10
+TEST_REPEAT = 0
 name_arg += extra_name
 model_name = '_'.join(name_arg)
-
-# model_name = 'model_93071'; MODEL = 'GAC'# GACNet cosine GP  L2 3e-2 trained on train val 1:1  0.9046 A0.852/0.8729 A0.833
-# model_name = 'model_83173'; MODEL = 'GAC'  # GACNet cosine GP  L2 1e-2 MIXUP trained on train val 1:1  0.9163 A0.837
-# model_name = 'model_79740'; MODEL = 'GAC'  # GACNet cosine GP  L2 1.5e-2 FOCAL trained on train val 1:1 0.9307
-
 
 # model_name = 'GAC_lr0.0001_bs64_l1_0_l2_0.01_T1.5_semi2t_th0.8_lam0' # na
 # model_name = 'GAC_lr0.0001_bs64_l1_0_l2_0.01_T1.5_semi3t_lam0'
@@ -114,7 +124,21 @@ model_name = '_'.join(name_arg)
 # model_name = 'RESNEXT_lr0.0001_bs64_l1_0_l2_0.01_T1.5_semi2t_th0.8_lam0'
 # model_name = 'RESNEXT_lr0.0001_bs64_l1_0_l2_0.01_T1.5_semi3t_lam0'
 # model_name = 'RESNEXT_lr0.0001_bs64_l1_0_l2_0.01_T1.5_semi3t_onehot_lam0'
-
 # model_name = 'RES10_lr0.0001_bs64_l1_0_l2_0.01_T1.5_semi4t_lam0'
 # model_name = 'RES18_lr0.0001_bs64_l1_0_l2_0.01_T1.5_semi4t_lam0'
 # model_name = 'RESNEXT_lr0.0001_bs64_l1_0_l2_0.01_T1.5_semi4t_lam0'
+# model_name = 'DENSE-YS_lr0.0001_bs64_l1_0_l2_0.01_T1.5_semi4t_lam0'
+
+model_name_list = [
+    'GAC_lr0.0001_bs64_l1_0_l2_0.01_T1.5_semi3t_lam0',
+    'RES10_lr0.0001_bs64_l1_0_l2_0.01_T1.5_semi2t_th0.8_lam0',
+    'RES10_lr0.0001_bs64_l1_0_l2_0.01_T1.5_semi3t_lam0',
+    'RES18_lr0.0001_bs64_l1_0_l2_0.01_T1.5_semi2t_th0.8_lam0',
+    'RES18_lr0.0001_bs64_l1_0_l2_0.01_T1.5_semi3t_lam0',
+    'RESNEXT_lr0.0001_bs64_l1_0_l2_0.01_T1.5_semi2t_th0.8_lam0',
+    'RESNEXT_lr0.0001_bs64_l1_0_l2_0.01_T1.5_semi3t_lam0',
+    'RES10_lr0.0001_bs64_l1_0_l2_0.01_T1.5_semi4t_lam0',
+    'RES18_lr0.0001_bs64_l1_0_l2_0.01_T1.5_semi4t_lam0',
+    'RESNEXT_lr0.0001_bs64_l1_0_l2_0.01_T1.5_semi4t_lam0',
+    'DENSE-YS_lr0.0001_bs64_l1_0_l2_0.01_T1.5_semi4t_lam0'
+    ]
